@@ -8,35 +8,28 @@ Working Vite + React Single-Page Application with Routing, State Management, and
 - Passed data cleanly down component tree using React `props`
 
 ## Practical 2: State Management and Routing in React
-- Installed and configured **React Router v6** (`BrowserRouter`, `Routes`, `Route`, `Link`/`NavLink`)
+- Installed and configured **React Router v6** (`BrowserRouter`, `Routes`, `Route`, `NavLink`)
 - Configured client-side multi-page routing without full browser page reloads:
   - `/` → Home Page
   - `/projects` → Projects Page
   - `/contact` → Interactive Contact Form Page
   - `*` → Custom 404 Not Found Page
 - Implemented reactive state management using **`useState`**:
-  - Controlled Contact Form input
-  - Live Character Count
-  - UI Visibility Toggle (`showHelp`)
-  - Dark / Light Theme Toggle (`isDarkMode`)
+  - Controlled Contact Form, Live Character Counter, UI Visibility Toggle, and Dark/Light Theme Switcher.
 
 ## Practical 3: API Integration and Data Rendering in React
-- Consumed public REST API (`https://api.github.com/users/Daksh-124/repos`)
-- Used **`useEffect`** to trigger asynchronous data fetch on component mount
-- Handled 3 distinct asynchronous states cleanly:
-  - **`loading`**: Displays `<Spinner />` animation component
-  - **`error`**: Displays `<ErrorMessage message={error} onRetry={fetchRepositories} />` with interactive Retry button
-  - **`success`**: Renders dynamic repository cards (name, stars ⭐, language, description, and GitHub URL)
-- Added dynamic search filter input to filter repositories by name in real time
-- Added interactive error testing toggle to simulate network/API errors live for evaluation
+- Integrated public **GitHub REST API** (`https://api.github.com/users/Daksh-124/repos`)
+- Used `useEffect` hook with empty dependency array `[]` to trigger network request on component mount.
+- Managed 3 core asynchronous states:
+  1. **Data State** (`repos`): Stores fetched repositories array dynamically.
+  2. **Loading State** (`loading`): Displays animated `<Spinner />` component while request is in progress.
+  3. **Error State** (`error`): Displays `<ErrorMessage />` component on request failure with a **Retry Button**.
+- Added real-time **Search / Filter Input** to filter repositories by name or description.
+- Added GitHub **Star Count** badges (`⭐`) alongside repository names.
+- Added an interactive **"Test Error State"** toggle button for easy lab demonstration.
 
 ## Getting Started
 ```bash
 npm install
 npm run dev
-```
-
-## Production Build
-```bash
-npm run build
 ```

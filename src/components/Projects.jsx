@@ -3,30 +3,31 @@ import Spinner from './Spinner';
 import ErrorMessage from './ErrorMessage';
 
 function Projects() {
-  // Practical 3 State Variables
+  // Step 1: 3 core state variables for async API fetch
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Supplementary problem states: Search filter & Error simulation
+  // Supplementary states: Search filter & Error simulation toggle for testing
   const [searchTerm, setSearchTerm] = useState('');
-  const [shouldSimulateError, setShouldSimulateError] = useState(false);
+  const [simulateError, setSimulateError] = useState(false);
 
+  // GitHub username to fetch from
   const githubUsername = 'Daksh-124';
 
-  const fetchRepositories = () => {
+  const fetchRepos = () => {
     setLoading(true);
     setError(null);
 
-    // Endpoint URL (uses broken endpoint if error simulation is toggled)
-    const apiUrl = shouldSimulateError
-      ? 'https://api.github.com/users/invalid_user_name_test_12345/repos'
-      : `https://api.github.com/users/${githubUsername}/repos?sort=updated&per_page=30`;
+    // If simulateError toggle is enabled, simulate an intentional network error for lab testing
+    const apiUrl = simulateError
+      ? 'https://api.github.com/invalid-endpoint-for-testing-error'
+      : `https://api.github.com/users/${githubUsername}/repos?sort=updated`;
 
     fetch(apiUrl)
       .then((res) => {
         if (!res.ok) {
-          throw new Error(`HTTP Error ${res.status}: ${res.statusText || 'User or repositories not found'}`);
+          throw new Error(`HTTP Error ${res.status}: ${res.statusText || 'Failed to fetch repositories'}`);
         }
         return res.json();
       })
@@ -34,107 +35,106 @@ function Projects() {
         if (Array.isArray(data)) {
           setRepos(data);
         } else {
-          throw new Error('API returned invalid data format.');
+          throw new Error(data.message || 'Invalid API response format');
         }
       })
       .catch((err) => {
-        setError(err.message || 'Failed to fetch repositories.');
+        setError(err.message || 'Network error occurred while fetching GitHub repositories.');
       })
       .finally(() => {
         setLoading(false);
       });
   };
 
-  // useEffect triggers fetch on mount
+  // Step 2: Trigger API fetch on component mount using useEffect with empty dependency array []
   useEffect(() => {
-    fetchRepositories();
-  }, [shouldSimulateError]);
+    fetchRepos();
+  }, [simulateError]);
 
-  // Filter repositories based on search input
+  // Filter repositories dynamically by search input
   const filteredRepos = repos.filter((repo) =>
     repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (repo.description && repo.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
-    <section id="projects" className="section projects-api-section">
-      <div className="section-header-api">
-        <h2>GitHub Repositories (REST API)</h2>
-        <p className="subtitle">
-          Practical 3: Consuming REST API (<code>api.github.com/users/{githubUsername}/repos</code>) with <code>useEffect</code> & <code>useState</code>.
-        </p>
-      </div>
+    <section id="projects" className="section projects-section">
+      <h2>GitHub Repositories (API Integration)</h2>
+      <p className="subtitle">
+        Practical 3: Consuming REST API (<code>https://api.github.com/users/{githubUsername}/repos</code>) with <code>useEffect</code>, <code>useState</code>, Loading & Error handling.
+      </p>
 
-      {/* Controls & Search Filter Bar */}
+      {/* Lab Testing Controls */}
       <div className="api-controls-bar">
         <div className="search-box">
+          <label htmlFor="search-repo">🔍 Filter Repositories:</label>
           <input
             type="text"
-            placeholder="🔍 Search repositories by name..."
+            id="search-repo"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by repo name or keyword..."
             disabled={loading || error !== null}
           />
         </div>
 
-        <button
-          className={`simulate-error-btn ${shouldSimulateError ? 'active' : ''}`}
-          onClick={() => setShouldSimulateError(!shouldSimulateError)}
-        >
-          {shouldSimulateError ? '🟢 Reset to Live API' : '🧪 Test Error State'}
-        </button>
+        <div className="error-test-box">
+          <button
+            onClick={() => setSimulateError(!simulateError)}
+            className={`test-error-btn ${simulateError ? 'active' : ''}`}
+            title="Click to test error state handling for lab evaluation"
+          >
+            {simulateError ? '🔴 Error Test Mode (Active)' : '🧪 Test Error State'}
+          </button>
+        </div>
       </div>
 
-      {/* Conditional Rendering based on state */}
+      {/* Conditional Rendering based on async state */}
       {loading && <Spinner />}
 
       {!loading && error && (
-        <ErrorMessage
-          message={error}
-          onRetry={fetchRepositories}
-        />
+        <ErrorMessage message={error} onRetry={fetchRepos} />
       )}
 
       {!loading && !error && (
         <>
           <div className="repo-count-badge">
-            Showing {filteredRepos.length} of {repos.length} repositories
+            Showing <strong>{filteredRepos.length}</strong> of <strong>{repos.length}</strong> repositories fetched live from GitHub
           </div>
 
           {filteredRepos.length === 0 ? (
-            <p className="no-repos-text">No repositories match your search criteria "{searchTerm}".</p>
+            <div className="no-repos">
+              <p>No repositories found matching "{searchTerm}".</p>
+            </div>
           ) : (
-            <div className="projects-grid">
+            <div className="projects-container">
               {filteredRepos.map((repo) => (
                 <div key={repo.id} className="project-card repo-card">
-                  <div className="repo-card-header">
-                    <h3 className="repo-name">{repo.name}</h3>
+                  <div className="repo-header">
+                    <h3 className="repo-name">
+                      <a href={repo.html_url} target="_blank" rel="noreferrer">
+                        📦 {repo.name}
+                      </a>
+                    </h3>
                     <span className="star-badge" title="GitHub Stars">
                       ⭐ {repo.stargazers_count}
                     </span>
                   </div>
 
-                  <p className="repo-description">
+                  <p className="repo-desc">
                     {repo.description || 'No description provided for this repository.'}
                   </p>
 
-                  <div className="repo-meta font-small">
+                  <div className="repo-footer">
                     {repo.language && (
-                      <span className="language-badge">🏷️ {repo.language}</span>
+                      <span className="language-tag">
+                        <span className="lang-dot"></span> {repo.language}
+                      </span>
                     )}
-                    <span className="updated-date">
-                      📅 Updated: {new Date(repo.updated_at).toLocaleDateString()}
-                    </span>
+                    <a href={repo.html_url} target="_blank" rel="noreferrer" className="repo-link">
+                      View on GitHub &rarr;
+                    </a>
                   </div>
-
-                  <a
-                    href={repo.html_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="repo-link-btn"
-                  >
-                    View on GitHub &rarr;
-                  </a>
                 </div>
               ))}
             </div>

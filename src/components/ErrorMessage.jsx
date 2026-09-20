@@ -4,11 +4,11 @@ function ErrorMessage({ message, onRetry }) {
   return (
     <div className="error-container">
       <div className="error-icon">⚠️</div>
-      <h3 className="error-title">Failed to Fetch Data</h3>
-      <p className="error-message">{message}</p>
+      <h3 className="error-title">API Fetch Error</h3>
+      <p className="error-message">{message || 'Failed to fetch repositories from GitHub API.'}</p>
       {onRetry && (
-        <button className="retry-btn" onClick={onRetry}>
-          🔄 Retry Fetch
+        <button onClick={onRetry} className="retry-btn">
+          🔄 Retry Fetching Repositories
         </button>
       )}
     </div>
