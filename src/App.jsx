@@ -1,23 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
-import Header from './components/Header';
-import About from './components/About';
-import Skills from './components/Skills';
-import Projects from './components/Projects';
+import Home from './pages/Home';
+import ProjectsPage from './pages/ProjectsPage';
+import Contact from './pages/Contact';
+import NotFound from './pages/NotFound';
 import Footer from './components/Footer';
 import './App.css';
 
 function App() {
-  const studentName = "Daksh Digashia";
-  const mySkills = ["HTML", "CSS", "JavaScript", "React", "Git"];
+  // useState for Dark / Light theme toggle (Supplementary Problem requirement)
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => !prev);
+  };
 
   return (
-    <div className="container">
-      <NavBar />
-      <Header name={studentName} title="Student Portfolio" />
-      <About />
-      <Skills skillList={mySkills} />
-      <Projects />
+    <div className={`container ${isDarkMode ? 'dark-theme' : 'light-theme'}`}>
+      <NavBar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+      <main className="main-body">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
       <Footer />
     </div>
   );

@@ -1,16 +1,32 @@
-# React + Vite
+# Portfolio - Daksh Digashia (Roll No: D25CS124)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Working Vite + React Single-Page Application with Client-Side Routing and State Management.
 
-Currently, two official plugins are available:
+## Practical 1: Introduction to React & Component Architecture
+- Set up React environment using Vite
+- Created modular, reusable functional components (`Header`, `About`, `Skills`, `Projects`, `Footer`)
+- Passed data cleanly down component tree using React `props`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Practical 2: State Management and Routing in React
+- Installed and configured **React Router v6** (`BrowserRouter`, `Routes`, `Route`, `Link`/`NavLink`)
+- Configured client-side multi-page routing without full browser page reloads:
+  - `/` → Home Page (Header, About, Skills)
+  - `/projects` → Projects Page
+  - `/contact` → Interactive Contact Form Page
+  - `*` → Custom 404 Not Found Page
+- Implemented reactive state management using **`useState`**:
+  - **Controlled Contact Form**: Real-time two-way data binding on form input.
+  - **Live Character Count**: Displays real-time message length below textarea.
+  - **UI Visibility Toggle**: Button toggling instruction box visibility (`showHelp` state).
+  - **Dark / Light Theme Toggle**: Dynamic state toggling `.dark-theme` / `.light-theme` root classes.
 
-## React Compiler
+## Getting Started
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Production Build
+```bash
+npm run build
+```
