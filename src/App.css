@@ -1,0 +1,132 @@
+/* Simple & Clean CSS for Student Portfolio */
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f9;
+  color: #333;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #333;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 5px;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+/* Header */
+.header {
+  background-color: #007bff;
+  color: white;
+  padding: 30px;
+  text-align: center;
+  border-radius: 5px;
+  margin-top: 15px;
+}
+
+.header h1 {
+  margin: 0 0 10px 0;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+/* Sections */
+.section {
+  background: white;
+  padding: 20px;
+  margin-top: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.section h2 {
+  margin-top: 0;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 5px;
+  color: #007bff;
+}
+
+/* Skills List */
+.skills-list {
+  list-style-type: square;
+  padding-left: 20px;
+}
+
+.skills-list li {
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+/* Projects */
+.projects-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-card {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+.project-card h3 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.project-card p {
+  margin: 0;
+  color: #666;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 15px;
+  margin-top: 20px;
+  background-color: #333;
+  color: white;
+  border-radius: 5px;
+}
+
+.footer p {
+  margin: 5px 0;
+}
