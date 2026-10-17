@@ -3,6 +3,7 @@ import Spinner from './Spinner';
 import ErrorMessage from './ErrorMessage';
 import Toast from './Toast';
 import AuthCard from './AuthCard';
+import TaskCardItem from './TaskCardItem';
 import { getTasks, createTask, updateTask, deleteTask, getDbStatus } from '../services/api';
 
 // Helper function for relative timestamps (e.g., "1 hour ago", "1 day ago")
@@ -438,69 +439,16 @@ function Projects({ currentUser, onAuthSuccess }) {
                 </div>
               ) : (
                 <div className="task-cards-grid">
-                  {filteredTasks.map((task) => {
-                    const id = task._id || task.id;
-                    const isCompleted = task.completed === true;
-                    const priority = task.priority || 'medium';
-
-                    return (
-                      <div
-                        key={id}
-                        className={`task-modern-card priority-border-${priority} ${isCompleted ? 'is-completed' : ''}`}
-                      >
-                        <div className="card-top-row">
-                          <div className="card-title-group">
-                            <h4 className="task-title-text">{task.title}</h4>
-                            <span className={`badge-pill badge-${priority}`}>
-                              {priority === 'high' ? '🔴 HIGH' : priority === 'medium' ? '🟡 MEDIUM' : '🔵 LOW'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="task-desc-text">
-                          {task.description || 'No additional details provided.'}
-                        </p>
-
-                        {/* Status Checkbox & Relative Time Row matching reference image */}
-                        <div className="card-status-time-row">
-                          <div
-                            className="status-clickable-toggle"
-                            onClick={() => handleToggleComplete(task)}
-                          >
-                            <span className={`status-checkbox-icon ${isCompleted ? 'checked' : ''}`}>
-                              {isCompleted ? '☑' : '☐'}
-                            </span>
-                            <span className="status-label-text">
-                              {isCompleted ? 'Completed' : 'Mark Complete'}
-                            </span>
-                          </div>
-
-                          <span className="task-relative-time">
-                            {timeAgo(task.createdAt)}
-                          </span>
-                        </div>
-
-                        {/* Prominent Edit and Delete Buttons matching reference image */}
-                        <div className="card-actions-prominent">
-                          <button
-                            onClick={() => handleEditClick(task)}
-                            className="btn-pill-action btn-pill-edit"
-                            title="Edit Task"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteTask(task)}
-                            className="btn-pill-action btn-pill-delete"
-                            title="Delete Task from MongoDB"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {filteredTasks.map((task) => (
+                    <TaskCardItem
+                      key={task._id || task.id}
+                      task={task}
+                      onToggleComplete={handleToggleComplete}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeleteTask}
+                      timeAgoText={timeAgo(task.createdAt)}
+                    />
+                  ))}
                 </div>
               )}
             </>

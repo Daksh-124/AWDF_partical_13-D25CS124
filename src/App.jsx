@@ -1,14 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
-import Home from './pages/Home';
-import ProjectsPage from './pages/ProjectsPage';
-import Contact from './pages/Contact';
-import NotFound from './pages/NotFound';
 import Footer from './components/Footer';
 import AuthCard from './components/AuthCard';
+import LoadingFallback from './components/LoadingFallback';
+import { lazyWithDelay } from './utils/lazyWithDelay';
 import { getSavedUser, getCurrentUser, clearAuthToken, saveUser } from './services/api';
 import './App.css';
+
+// ============================================================================
+// Practical 8: Route-Based Code Splitting via React.lazy() & Suspense
+// Each route component is compiled into a separate chunk downloaded on-demand.
+// Minimum delay of 300ms applied via lazyWithDelay to ensure smooth transitions.
+// ============================================================================
+const Home = lazyWithDelay(() => import('./pages/Home'), 300);
+const ProjectsPage = lazyWithDelay(() => import('./pages/ProjectsPage'), 300);
+const PerformancePage = lazyWithDelay(() => import('./pages/PerformancePage'), 300);
+const Contact = lazyWithDelay(() => import('./pages/Contact'), 300);
+const NotFound = lazyWithDelay(() => import('./pages/NotFound'), 200);
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -70,30 +79,35 @@ function App() {
       )}
 
       <main className="main-body">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route
-            path="/projects"
-            element={
-              <ProjectsPage
-                currentUser={currentUser}
-                onAuthSuccess={handleAuthSuccess}
-              />
-            }
-          />
-          <Route
-            path="/tasks"
-            element={
-              <ProjectsPage
-                currentUser={currentUser}
-                onAuthSuccess={handleAuthSuccess}
-              />
-            }
-          />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/learn-more" element={<Contact />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        {/* Route-level Suspense Boundary with Meaningful Fallback UI */}
+        <Suspense fallback={<LoadingFallback message="Loading requested page chunk dynamically..." />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route
+              path="/projects"
+              element={
+                <ProjectsPage
+                  currentUser={currentUser}
+                  onAuthSuccess={handleAuthSuccess}
+                />
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProjectsPage
+                  currentUser={currentUser}
+                  onAuthSuccess={handleAuthSuccess}
+                />
+              }
+            />
+            <Route path="/performance" element={<PerformancePage />} />
+            <Route path="/analytics" element={<PerformancePage />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/learn-more" element={<Contact />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <Footer />

@@ -8,7 +8,7 @@ function NavBar({ isDarkMode, toggleTheme, currentUser, onLogout, onOpenAuth }) 
         <NavLink to="/" className="brand-logo">
           <span className="brand-icon">⚡</span>
           <span className="brand-text">Daksh<span className="brand-accent">.dev</span></span>
-          <span className="version-pill">AWDF P-7</span>
+          <span className="version-pill">AWDF P-8</span>
         </NavLink>
 
         <ul className="nav-menu">
@@ -23,8 +23,13 @@ function NavBar({ isDarkMode, toggleTheme, currentUser, onLogout, onOpenAuth }) 
             </NavLink>
           </li>
           <li>
+            <NavLink to="/performance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              ⚡ Performance &amp; Analytics
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/contact" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-              Contact & Learn More
+              Contact &amp; Learn More
             </NavLink>
           </li>
 

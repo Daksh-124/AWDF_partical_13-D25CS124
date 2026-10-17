@@ -1844,3 +1844,345 @@ body {
   font-size: 0.78rem;
 }
 
+
+/* ==========================================================================
+   Practical 8: Lazy Loading, Fallback UI, and Performance Analytics Styles
+   ========================================================================== */
+
+/* Suspense Route Loading Fallback */
+.route-loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 420px;
+  padding: 40px 20px;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.route-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 36px 30px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.route-loading-spinner-ring {
+  width: 52px;
+  height: 52px;
+  border: 4px solid rgba(59, 130, 246, 0.15);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+  margin-bottom: 20px;
+}
+
+.route-loading-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.route-loading-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.route-loading-subtitle code {
+  background: var(--bg-elevated);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.route-loading-badge {
+  margin-top: 20px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Skeleton Loading Structure */
+.route-skeleton-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-bar {
+  height: 14px;
+  background: linear-gradient(90deg, rgba(150, 150, 150, 0.1) 25%, rgba(150, 150, 150, 0.25) 50%, rgba(150, 150, 150, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+.skeleton-title {
+  height: 22px;
+  width: 60%;
+  margin: 0 auto 6px auto;
+}
+
+.skeleton-text {
+  width: 85%;
+  margin: 0 auto;
+}
+
+.skeleton-text.short {
+  width: 50%;
+}
+
+.skeleton-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.skeleton-card {
+  height: 60px;
+  background: linear-gradient(90deg, rgba(150, 150, 150, 0.1) 25%, rgba(150, 150, 150, 0.22) 50%, rgba(150, 150, 150, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Performance Page Styles */
+.page-performance {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.performance-hero-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.perf-badge-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.perf-badge {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.perf-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+
+.perf-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 800px;
+  margin-bottom: 28px;
+}
+
+.perf-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.metric-box.highlight {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.metric-sub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Comparison Table */
+.perf-comparison-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.comparison-table-wrapper {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.94rem;
+}
+
+.perf-table th {
+  background: var(--bg-elevated);
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.perf-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.badge-red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.badge-green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* Charts Section */
+.perf-charts-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+}
+
+.chart-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.btn-toggle-charts {
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-toggle-charts:hover {
+  opacity: 0.9;
+}
+
+.analytics-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.chart-header-banner {
+  background: var(--bg-elevated);
+  border-left: 4px solid var(--primary);
+  padding: 16px 20px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.chart-pill-badge {
+  display: inline-block;
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.chart-section-title {
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.chart-section-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.chart-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.chart-card-title {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.chart-card-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.chart-canvas-wrapper {
+  position: relative;
+  height: 260px;
+  width: 100%;
+}
