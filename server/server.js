@@ -10,6 +10,15 @@ const Task = require('./models/Task');
 const User = require('./models/User');
 const authMiddleware = require('./middleware/auth');
 const { validateRegister, validateLogin, validateTaskInput } = require('./middleware/validate');
+const {
+  cache,
+  cacheStats,
+  getCached,
+  setCached,
+  invalidateTaskCaches,
+  getStatsSummary,
+  resetStats
+} = require('./cache');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -71,8 +80,20 @@ app.get('/api/db-status', (req, res) => {
     connectionState: mongoose.connection.readyState,
     readyStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
     mongoUri: MONGO_URI,
-    authMode: 'JWT Bearer Authentication Active (Practical 7)'
+    authMode: 'JWT Bearer Authentication Active (Practical 7)',
+    cachingEngine: 'node-cache in-memory (Practical 9)'
   });
+});
+
+// GET /api/cache-stats - Monitoring endpoint for in-memory cache metrics (Practical 9)
+app.get('/api/cache-stats', (req, res) => {
+  res.status(200).json(getStatsSummary());
+});
+
+// POST /api/cache-flush - Flush cache and reset counters (For lab testing)
+app.post('/api/cache-flush', (req, res) => {
+  resetStats();
+  res.status(200).json({ message: 'In-memory cache flushed and stats reset successfully.' });
 });
 
 // ==========================================
@@ -282,26 +303,63 @@ app.get('/me', authMiddleware, async (req, res, next) => {
 // 6. PROTECTED TASK ROUTES (Requires JWT authMiddleware)
 // ==========================================
 
-// GET /tasks - Protected: Retrieve tasks
+// GET /tasks - Protected with In-Memory Caching (Practical 9)
 app.get('/tasks', authMiddleware, async (req, res, next) => {
+  const startTime = Date.now();
   try {
+    const cacheKey = req.user ? `tasks_${req.user.id}` : 'all_tasks';
+    const { data: cachedTasks, isHit } = getCached(cacheKey);
+
+    if (isHit && cachedTasks) {
+      const duration = Date.now() - startTime;
+      res.set('X-Cache', 'HIT');
+      res.set('X-Cache-Key', cacheKey);
+      res.set('X-Response-Time-Ms', duration.toString());
+      return res.status(200).json(cachedTasks);
+    }
+
+    res.set('X-Cache', 'MISS');
+    res.set('X-Cache-Key', cacheKey);
+
     if (mongoose.connection.readyState === 1) {
       // Find tasks belonging to current user or shared tasks
       const tasks = await Task.find({
         $or: [{ user: req.user.id }, { user: null }]
       }).sort({ createdAt: -1 });
+
+      setCached(cacheKey, tasks, 60);
+      const duration = Date.now() - startTime;
+      res.set('X-Response-Time-Ms', duration.toString());
       return res.status(200).json(tasks);
     }
+
+    setCached(cacheKey, fallbackTasks, 60);
+    const duration = Date.now() - startTime;
+    res.set('X-Response-Time-Ms', duration.toString());
     res.status(200).json(fallbackTasks);
   } catch (err) {
     next(err);
   }
 });
 
-// GET /tasks/:id - Protected: Retrieve single task
+// GET /tasks/:id - Protected with Single-Task In-Memory Caching (Practical 9 Supplementary)
 app.get('/tasks/:id', authMiddleware, async (req, res, next) => {
+  const startTime = Date.now();
   try {
     const { id } = req.params;
+    const cacheKey = `task_${id}`;
+    const { data: cachedTask, isHit } = getCached(cacheKey);
+
+    if (isHit && cachedTask) {
+      const duration = Date.now() - startTime;
+      res.set('X-Cache', 'HIT');
+      res.set('X-Cache-Key', cacheKey);
+      res.set('X-Response-Time-Ms', duration.toString());
+      return res.status(200).json(cachedTask);
+    }
+
+    res.set('X-Cache', 'MISS');
+    res.set('X-Cache-Key', cacheKey);
 
     if (mongoose.connection.readyState === 1) {
       const task = await Task.findById(id);
@@ -312,6 +370,9 @@ app.get('/tasks/:id', authMiddleware, async (req, res, next) => {
           status: 404
         });
       }
+      setCached(cacheKey, task, 60);
+      const duration = Date.now() - startTime;
+      res.set('X-Response-Time-Ms', duration.toString());
       return res.status(200).json(task);
     }
 
@@ -323,6 +384,9 @@ app.get('/tasks/:id', authMiddleware, async (req, res, next) => {
         status: 404
       });
     }
+    setCached(cacheKey, task, 60);
+    const duration = Date.now() - startTime;
+    res.set('X-Response-Time-Ms', duration.toString());
     res.status(200).json(task);
   } catch (err) {
     next(err);
@@ -339,6 +403,8 @@ app.post('/tasks', authMiddleware, validateTaskInput, async (req, res, next) => 
 
     if (mongoose.connection.readyState === 1) {
       const newTask = await Task.create(taskData);
+      // Invalidate in-memory cache after write operation (Practical 9)
+      invalidateTaskCaches(req.user.id);
       return res.status(201).json(newTask);
     }
 
@@ -352,6 +418,7 @@ app.post('/tasks', authMiddleware, validateTaskInput, async (req, res, next) => 
       createdAt: new Date()
     };
     fallbackTasks.unshift(newTask);
+    invalidateTaskCaches(req.user.id);
     res.status(201).json(newTask);
   } catch (err) {
     next(err);
@@ -376,6 +443,8 @@ app.put('/tasks/:id', authMiddleware, validateTaskInput, async (req, res, next) 
           status: 404
         });
       }
+      // Invalidate in-memory cache for all tasks and updated single task (Practical 9)
+      invalidateTaskCaches(req.user.id, id);
       return res.status(200).json(updatedTask);
     }
 
@@ -393,6 +462,7 @@ app.put('/tasks/:id', authMiddleware, validateTaskInput, async (req, res, next) 
     if (req.body.completed !== undefined) fallbackTasks[taskIndex].completed = req.body.completed;
     if (req.body.priority !== undefined) fallbackTasks[taskIndex].priority = req.body.priority;
 
+    invalidateTaskCaches(req.user.id, id);
     res.status(200).json(fallbackTasks[taskIndex]);
   } catch (err) {
     next(err);
@@ -413,6 +483,8 @@ app.delete('/tasks/:id', authMiddleware, async (req, res, next) => {
           status: 404
         });
       }
+      // Invalidate in-memory cache for all tasks and deleted task (Practical 9)
+      invalidateTaskCaches(req.user.id, id);
       return res.status(200).json({
         message: 'Task deleted successfully from MongoDB',
         deletedTask
@@ -429,6 +501,7 @@ app.delete('/tasks/:id', authMiddleware, async (req, res, next) => {
     }
 
     const deletedTask = fallbackTasks.splice(taskIndex, 1)[0];
+    invalidateTaskCaches(req.user.id, id);
     res.status(200).json({
       message: 'Task deleted successfully',
       deletedTask

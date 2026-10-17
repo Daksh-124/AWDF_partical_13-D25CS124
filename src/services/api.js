@@ -202,3 +202,31 @@ export const deleteTask = async (id) => {
   }
   return data;
 };
+
+// ==========================================
+// CACHE MONITORING METHODS (Practical 9)
+// ==========================================
+
+export const getCacheStats = async () => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/cache-stats`);
+    if (!res.ok) throw new Error('Failed to fetch cache stats');
+    return await res.json();
+  } catch (err) {
+    return {
+      hits: 0,
+      misses: 0,
+      totalRequests: 0,
+      hitRatio: '0.0%',
+      invalidations: 0,
+      activeKeysCount: 0,
+      activeKeys: [],
+      error: err.message
+    };
+  }
+};
+
+export const flushCache = async () => {
+  const res = await fetch(`${BASE_URL}/api/cache-flush`, { method: 'POST' });
+  return await res.json();
+};

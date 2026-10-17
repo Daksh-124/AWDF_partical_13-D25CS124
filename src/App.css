@@ -2186,3 +2186,147 @@ body {
   height: 260px;
   width: 100%;
 }
+
+/* ==========================================================================
+   Practical 9: Server Caching Monitor & Dashboard Styles
+   ========================================================================== */
+
+.cache-monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.cache-actions-btn-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-refresh-cache {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh-cache:hover {
+  background: var(--border-color);
+}
+
+.btn-flush-cache {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-flush-cache:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.cache-feedback-banner {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s;
+}
+
+.cache-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.cache-stat-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cache-stat-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cache-stat-label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cache-stat-sub {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.active-keys-viewer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-color);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.keys-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.keys-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.key-badge {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.sub-table-heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.table-highlight-row {
+  background: rgba(16, 185, 129, 0.08);
+  font-weight: 700;
+}
