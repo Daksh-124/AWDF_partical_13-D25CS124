@@ -5,11 +5,27 @@ import Skills from '../components/Skills';
 
 function Home() {
   const studentName = "Daksh Digashia";
-  const mySkills = ["HTML5", "CSS3", "JavaScript (ES6+)", "React.js", "Vite", "React Router", "Git & GitHub"];
+  const mySkills = [
+    "React.js",
+    "Node.js",
+    "Express.js",
+    "MongoDB",
+    "Mongoose ODM",
+    "RESTful APIs",
+    "React Router",
+    "JavaScript (ES6+)",
+    "HTML5",
+    "CSS3",
+    "Vite",
+    "Git & GitHub"
+  ];
 
   return (
     <div className="page-home">
-      <Header name={studentName} title="Computer Science & Engineering Student | React Developer" />
+      <Header
+        name={studentName}
+        title="Full-Stack Developer | CSE Student (Roll No: D25CS124)"
+      />
       <About />
       <Skills skillList={mySkills} />
     </div>

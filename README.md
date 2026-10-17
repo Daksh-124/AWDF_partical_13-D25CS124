@@ -1,35 +1,118 @@
-# Portfolio - Daksh Digashia (Roll No: D25CS124)
+# Practical 6: Full Stack Integration (React + Node.js + Express + MongoDB)
 
-Working Vite + React Single-Page Application with Routing, State Management, and REST API Integration.
+**Student Name**: Daksh Digashia  
+**Roll No**: D25CS124  
+**Course**: Advanced Web Development Frameworks (AWDF)  
+**Repository**: [AWDF_partical_6-D25CS124](https://github.com/Daksh-124/AWDF_partical_6-D25CS124)
 
-## Practical 1: Introduction to React & Component Architecture
-- Set up React environment using Vite
-- Created modular, reusable functional components (`Header`, `About`, `Skills`, `Projects`, `Footer`)
-- Passed data cleanly down component tree using React `props`
+---
 
-## Practical 2: State Management and Routing in React
-- Installed and configured **React Router v6** (`BrowserRouter`, `Routes`, `Route`, `NavLink`)
-- Configured client-side multi-page routing without full browser page reloads:
-  - `/` → Home Page
-  - `/projects` → Projects Page
-  - `/contact` → Interactive Contact Form Page
-  - `*` → Custom 404 Not Found Page
-- Implemented reactive state management using **`useState`**:
-  - Controlled Contact Form, Live Character Counter, UI Visibility Toggle, and Dark/Light Theme Switcher.
+## 📌 Project Overview
+This repository contains the complete full-stack integration for **Practical 6**, connecting a modern **React 18 Single-Page Application (Vite)** to a **Node.js / Express RESTful API** and **MongoDB database (via Mongoose ODM)**.
 
-## Practical 3: API Integration and Data Rendering in React
-- Integrated public **GitHub REST API** (`https://api.github.com/users/Daksh-124/repos`)
-- Used `useEffect` hook with empty dependency array `[]` to trigger network request on component mount.
-- Managed 3 core asynchronous states:
-  1. **Data State** (`repos`): Stores fetched repositories array dynamically.
-  2. **Loading State** (`loading`): Displays animated `<Spinner />` component while request is in progress.
-  3. **Error State** (`error`): Displays `<ErrorMessage />` component on request failure with a **Retry Button**.
-- Added real-time **Search / Filter Input** to filter repositories by name or description.
-- Added GitHub **Star Count** badges (`⭐`) alongside repository names.
-- Added an interactive **"Test Error State"** toggle button for easy lab demonstration.
+It provides end-to-end CRUD functionality (Create, Read, Update, Delete) with real-time optimistic UI updates, delete confirmation dialogues, floating toast notifications, and persistent MongoDB database storage.
 
-## Getting Started
+---
+
+## 🏗️ Architecture & Data Flow
+
+```
+React Frontend (localhost:5173)
+   │
+   │ Fetch API requests via CORS
+   ▼
+Express Backend (localhost:5000)
+   ├── server/server.js (Middleware Pipeline, CORS, Logging, Validation)
+   └── server/models/Task.js (Mongoose Schema & Pre-save Hooks)
+   │
+   │ Mongoose ODM Driver
+   ▼
+MongoDB Database
+   └── tasks collection (Title, Description, Priority, Completed, CreatedAt)
+```
+
+---
+
+## 🚀 How to Run the Full-Stack Application Locally
+
+### Prerequisites
+* **Node.js (v18+)** and **npm** installed
+* **MongoDB** service running locally on `mongodb://127.0.0.1:27017` (or MongoDB Atlas connection string)
+
+---
+
+### Step 1: Start the Backend (Express + MongoDB)
+Open a terminal and run:
 ```bash
+# Navigate to the backend directory
+cd server
+
+# Install backend dependencies
 npm install
+
+# Start the Express server on port 5000
+node server.js
+```
+> The backend server will start on: **`http://localhost:5000`**  
+> Tasks endpoint: **`http://localhost:5000/tasks`**  
+> Database status: **`http://localhost:5000/api/db-status`**
+
+---
+
+### Step 2: Start the Frontend (React + Vite)
+Open a second terminal in the project root directory and run:
+```bash
+# Install frontend dependencies
+npm install
+
+# Start the Vite React development server
 npm run dev
 ```
+> The frontend application will run on: **`http://localhost:5173`**
+
+---
+
+## 📡 RESTful Endpoints (Backend: `http://localhost:5000`)
+
+| HTTP Method | Route Endpoint | Description | Status Code |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/tasks` | Fetch all tasks from MongoDB | `200 OK` |
+| **GET** | `/tasks/:id` | Fetch a single task by ID | `200 OK` / `404 Not Found` |
+| **POST** | `/tasks` | Create a new task in MongoDB | `201 Created` / `400 Bad Request` |
+| **PUT** | `/tasks/:id` | Update an existing task (or toggle status) | `200 OK` / `400` / `404` |
+| **DELETE** | `/tasks/:id` | Permanently remove a task from MongoDB | `200 OK` / `404 Not Found` |
+| **GET** | `/api/db-status` | Verify live MongoDB connection health | `200 OK` |
+
+---
+
+## ✨ Key Features Implemented
+
+1. **Full-Stack CRUD Persistence**:
+   - Create, view, edit, and delete tasks directly from the React interface with changes saved into MongoDB. Data persists across browser refreshes.
+
+2. **Centralized API Service (`src/services/api.js`)**:
+   - Single point of configuration for the backend base URL (`http://localhost:5000`), abstracting fetch requests and HTTP error handling.
+
+3. **Optimistic UI Updates**:
+   - Instant visual update upon creating tasks and toggling completion status, ensuring zero UI lag.
+
+4. **Confirmation Safeguards**:
+   - Confirmation dialog prompt before executing `DELETE` requests to prevent accidental deletion.
+
+5. **Toast Notifications (`src/components/Toast.jsx`)**:
+   - Animated floating alert banner for real-time feedback on successful and failed API operations.
+
+6. **Filter & Search Dashboard**:
+   - Real-time search filter and tab filters (`All`, `Pending`, `Completed`, `High Priority`).
+
+7. **Contact & Learn More Page (`/contact`)**:
+   - Structured portfolio page with controlled contact form, key learning outcomes, technologies used, and dev run-down.
+
+8. **Dual Theme Support**:
+   - Toggle smoothly between Dark Mode and Light Mode.
+
+---
+
+## 📜 License & Author
+* **Author**: Daksh Digashia (Roll No: **D25CS124**)  
+* **Academic Year**: 2026
