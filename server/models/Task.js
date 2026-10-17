@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Mongoose Schema Definition for Practical 5
+// Mongoose Schema Definition for Practical 5, 6 & 7
 const taskSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -23,13 +23,17 @@ const taskSchema = new mongoose.Schema({
     },
     default: 'medium'
   },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Pre-save hook to trim whitespace from title (Supplementary Problem)
+// Pre-save hook to trim whitespace from title
 taskSchema.pre('save', function () {
   if (this.title) {
     this.title = this.title.trim();

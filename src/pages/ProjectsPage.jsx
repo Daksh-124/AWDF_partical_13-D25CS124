@@ -1,10 +1,10 @@
 import React from 'react';
 import Projects from '../components/Projects';
 
-function ProjectsPage() {
+function ProjectsPage({ currentUser, onAuthSuccess }) {
   return (
     <div className="page-projects">
-      <Projects />
+      <Projects currentUser={currentUser} onAuthSuccess={onAuthSuccess} />
     </div>
   );
 }

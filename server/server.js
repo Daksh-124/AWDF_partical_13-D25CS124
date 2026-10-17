@@ -2,12 +2,18 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const Task = require('./models/Task');
+const User = require('./models/User');
+const authMiddleware = require('./middleware/auth');
+const { validateRegister, validateLogin, validateTaskInput } = require('./middleware/validate');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'jwt_secret_practical7_daksh_d25cs124';
 
 // ==========================================
 // 1. CORE MIDDLEWARE
@@ -29,28 +35,43 @@ app.use((req, res, next) => {
 // 3. MONGODB DATABASE CONNECTION
 // ==========================================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskmanager';
-
 let isDbConnected = false;
 
 mongoose.connect(MONGO_URI, {
-  serverSelectionTimeoutMS: 5000 // Fast failover if local DB service is offline
+  serverSelectionTimeoutMS: 5000
 })
-  .then(() => {
+  .then(async () => {
     isDbConnected = true;
     console.log('✅ MongoDB connected successfully via Mongoose ODM');
+    // Ensure default demo user exists for easy lab evaluation
+    try {
+      const demoUser = await User.findOne({ email: 'daksh@example.com' });
+      if (!demoUser) {
+        const hashedPassword = await bcrypt.hash('password123', 10);
+        await User.create({
+          name: 'Daksh Digashia',
+          email: 'daksh@example.com',
+          password: hashedPassword
+        });
+        console.log('👤 Demo user created: daksh@example.com / password123');
+      }
+    } catch (e) {
+      console.warn('Demo user setup skipped:', e.message);
+    }
   })
   .catch((err) => {
     console.warn('⚠️ MongoDB connection warning:', err.message);
     console.warn('⚡ Operating in Mongoose Fallback Mode for Lab Testing.');
   });
 
-// Database status endpoint
+// Database and Auth status endpoint
 app.get('/api/db-status', (req, res) => {
   res.json({
     connected: isDbConnected,
     connectionState: mongoose.connection.readyState,
     readyStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
-    mongoUri: MONGO_URI
+    mongoUri: MONGO_URI,
+    authMode: 'JWT Bearer Authentication Active (Practical 7)'
   });
 });
 
@@ -73,48 +94,212 @@ const validateContentType = (req, res, next) => {
 
 app.use(validateContentType);
 
-// In-memory fallback array for lab environments without active MongoDB service
+// In-memory fallback arrays for offline DB lab environments
+let fallbackUsers = [];
 let fallbackTasks = [
-  { _id: '64f1a2b3c4d5e6f7a8b9c0d1', title: 'Connect MongoDB with Mongoose', description: 'Configure MONGO_URI and Mongoose connection', completed: true, priority: 'high', createdAt: new Date() },
-  { _id: '64f1a2b3c4d5e6f7a8b9c0d2', title: 'Define Task Schema with Enums', description: 'Enforce title required, completed default, and priority enum', completed: false, priority: 'medium', createdAt: new Date() }
+  { _id: '64f1a2b3c4d5e6f7a8b9c0d1', title: 'Implement JWT Authentication', description: 'Secure Express API with jsonwebtoken and bcryptjs', completed: true, priority: 'high', createdAt: new Date() },
+  { _id: '64f1a2b3c4d5e6f7a8b9c0d2', title: 'Input Validation Pipeline', description: 'Reject malformed requests before database operations', completed: true, priority: 'medium', createdAt: new Date() }
 ];
 
-// Helper to simulate Mongoose validation locally if DB is offline
-function validateTaskSchemaFallback(data, isUpdate = false) {
-  if (!isUpdate && (!data.title || typeof data.title !== 'string' || !data.title.trim())) {
-    const err = new Error('Task validation failed: title: Task title is required');
-    err.name = 'ValidationError';
-    err.errors = { title: { message: 'Task title is required', path: 'title' } };
-    throw err;
-  }
-  if (data.priority && !['low', 'medium', 'high'].includes(data.priority)) {
-    const err = new Error('Task validation failed: priority: Priority must be either low, medium, or high');
-    err.name = 'ValidationError';
-    err.errors = { priority: { message: 'Priority must be either low, medium, or high', path: 'priority' } };
-    throw err;
-  }
-}
+// Seed fallback demo user
+(async () => {
+  const hash = await bcrypt.hash('password123', 10);
+  fallbackUsers.push({
+    _id: '64f1a2b3c4d5e6f7a8b9c000',
+    name: 'Daksh Digashia',
+    email: 'daksh@example.com',
+    password: hash,
+    createdAt: new Date()
+  });
+})();
 
 // ==========================================
-// 5. MONGOOSE CRUD ROUTES
+// 5. AUTHENTICATION ROUTES (Practical 7)
 // ==========================================
 
-// GET /tasks - Retrieve all tasks from MongoDB
-app.get('/tasks', async (req, res, next) => {
+// POST /register - Register a new user with bcrypt password hashing
+app.post('/register', validateRegister, async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (mongoose.connection.readyState === 1) {
+      // Check if user already exists
+      const existingUser = await User.findOne({ email: normalizedEmail });
+      if (existingUser) {
+        return res.status(409).json({
+          error: 'User Already Exists',
+          message: `An account with email ${normalizedEmail} already exists. Please login.`,
+          status: 409
+        });
+      }
+
+      // Hash password using bcryptjs (salt rounds: 10)
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = await User.create({
+        name: name || 'Student User',
+        email: normalizedEmail,
+        password: hashedPassword
+      });
+
+      // Sign JWT token
+      const token = jwt.sign(
+        { id: newUser._id, email: newUser.email, name: newUser.name },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      return res.status(201).json({
+        message: 'User registered successfully with hashed password',
+        token,
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          createdAt: newUser.createdAt
+        }
+      });
+    }
+
+    // Fallback mode for offline DB
+    const existing = fallbackUsers.find((u) => u.email === normalizedEmail);
+    if (existing) {
+      return res.status(409).json({
+        error: 'User Already Exists',
+        message: 'Account already exists. Please login.',
+        status: 409
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: name || 'Student User',
+      email: normalizedEmail,
+      password: hashedPassword,
+      createdAt: new Date()
+    };
+    fallbackUsers.push(newUser);
+
+    const token = jwt.sign(
+      { id: newUser._id, email: newUser.email, name: newUser.name },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        createdAt: newUser.createdAt
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /login - Verify password with bcrypt.compare and return JWT token
+app.post('/login', validateLogin, async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    let user;
+    if (mongoose.connection.readyState === 1) {
+      user = await User.findOne({ email: normalizedEmail });
+    } else {
+      user = fallbackUsers.find((u) => u.email === normalizedEmail);
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication Failed',
+        message: 'Invalid email or password credentials.',
+        status: 401
+      });
+    }
+
+    // Compare plain password with bcrypt hashed password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        error: 'Authentication Failed',
+        message: 'Invalid email or password credentials.',
+        status: 401
+      });
+    }
+
+    // Sign JWT token with 1 hour expiration
+    const token = jwt.sign(
+      { id: user._id, email: user.email, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /me - Return currently logged in user from decoded JWT (Supplementary Problem)
+app.get('/me', authMiddleware, async (req, res, next) => {
   try {
     if (mongoose.connection.readyState === 1) {
-      const tasks = await Task.find().sort({ createdAt: -1 });
+      const user = await User.findById(req.user.id).select('-password');
+      if (!user) {
+        return res.status(404).json({ error: 'User Not Found', status: 404 });
+      }
+      return res.status(200).json({ user });
+    }
+
+    const user = fallbackUsers.find((u) => u._id === req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User Not Found', status: 404 });
+    }
+    const { password, ...safeUser } = user;
+    res.status(200).json({ user: safeUser });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ==========================================
+// 6. PROTECTED TASK ROUTES (Requires JWT authMiddleware)
+// ==========================================
+
+// GET /tasks - Protected: Retrieve tasks
+app.get('/tasks', authMiddleware, async (req, res, next) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      // Find tasks belonging to current user or shared tasks
+      const tasks = await Task.find({
+        $or: [{ user: req.user.id }, { user: null }]
+      }).sort({ createdAt: -1 });
       return res.status(200).json(tasks);
     }
-    // Fallback mode
     res.status(200).json(fallbackTasks);
   } catch (err) {
     next(err);
   }
 });
 
-// GET /tasks/:id - Retrieve a single task by ID
-app.get('/tasks/:id', async (req, res, next) => {
+// GET /tasks/:id - Protected: Retrieve single task
+app.get('/tasks/:id', authMiddleware, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -123,14 +308,13 @@ app.get('/tasks/:id', async (req, res, next) => {
       if (!task) {
         return res.status(404).json({
           error: 'Task Not Found',
-          message: `No task found in MongoDB with ID ${id}`,
+          message: `No task found with ID ${id}`,
           status: 404
         });
       }
       return res.status(200).json(task);
     }
 
-    // Fallback mode
     const task = fallbackTasks.find((t) => t._id === id || t.id === id);
     if (!task) {
       return res.status(404).json({
@@ -145,22 +329,26 @@ app.get('/tasks/:id', async (req, res, next) => {
   }
 });
 
-// POST /tasks - Create a new task using Mongoose model (Task.create)
-app.post('/tasks', async (req, res, next) => {
+// POST /tasks - Protected & Input Validated: Create task
+app.post('/tasks', authMiddleware, validateTaskInput, async (req, res, next) => {
   try {
+    const taskData = {
+      ...req.body,
+      user: req.user.id
+    };
+
     if (mongoose.connection.readyState === 1) {
-      const newTask = await Task.create(req.body);
+      const newTask = await Task.create(taskData);
       return res.status(201).json(newTask);
     }
 
-    // Fallback mode with schema validation
-    validateTaskSchemaFallback(req.body);
     const newTask = {
       _id: new mongoose.Types.ObjectId().toString(),
       title: req.body.title.trim(),
       description: req.body.description || '',
       completed: req.body.completed || false,
       priority: req.body.priority || 'medium',
+      user: req.user.id,
       createdAt: new Date()
     };
     fallbackTasks.unshift(newTask);
@@ -170,29 +358,27 @@ app.post('/tasks', async (req, res, next) => {
   }
 });
 
-// PUT /tasks/:id - Update an existing task using Mongoose (findByIdAndUpdate)
-app.put('/tasks/:id', async (req, res, next) => {
+// PUT /tasks/:id - Protected & Input Validated: Update task
+app.put('/tasks/:id', authMiddleware, validateTaskInput, async (req, res, next) => {
   try {
     const { id } = req.params;
 
     if (mongoose.connection.readyState === 1) {
       const updatedTask = await Task.findByIdAndUpdate(id, req.body, {
         new: true,
-        runValidators: true // Enforces Mongoose schema validation on update
+        runValidators: true
       });
 
       if (!updatedTask) {
         return res.status(404).json({
           error: 'Task Not Found',
-          message: `Cannot update. No task found in MongoDB with ID ${id}`,
+          message: `Cannot update. No task found with ID ${id}`,
           status: 404
         });
       }
       return res.status(200).json(updatedTask);
     }
 
-    // Fallback mode
-    validateTaskSchemaFallback(req.body, true);
     const taskIndex = fallbackTasks.findIndex((t) => t._id === id || t.id === id);
     if (taskIndex === -1) {
       return res.status(404).json({
@@ -213,8 +399,8 @@ app.put('/tasks/:id', async (req, res, next) => {
   }
 });
 
-// DELETE /tasks/:id - Delete a task using Mongoose (findByIdAndDelete)
-app.delete('/tasks/:id', async (req, res, next) => {
+// DELETE /tasks/:id - Protected: Delete task
+app.delete('/tasks/:id', authMiddleware, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -223,7 +409,7 @@ app.delete('/tasks/:id', async (req, res, next) => {
       if (!deletedTask) {
         return res.status(404).json({
           error: 'Task Not Found',
-          message: `Cannot delete. No task found in MongoDB with ID ${id}`,
+          message: `Cannot delete. No task found with ID ${id}`,
           status: 404
         });
       }
@@ -233,7 +419,6 @@ app.delete('/tasks/:id', async (req, res, next) => {
       });
     }
 
-    // Fallback mode
     const taskIndex = fallbackTasks.findIndex((t) => t._id === id || t.id === id);
     if (taskIndex === -1) {
       return res.status(404).json({
@@ -253,13 +438,13 @@ app.delete('/tasks/:id', async (req, res, next) => {
   }
 });
 
-// Test endpoint to trigger a deliberate 500 error
+// Test endpoint for 500 error handler
 app.get('/api/error-test', (req, res, next) => {
   next(new Error('Deliberate test error for global error handler pipeline.'));
 });
 
 // ==========================================
-// 6. CUSTOM 404 HANDLER FOR UNDEFINED ROUTES
+// 7. CUSTOM 404 HANDLER FOR UNDEFINED ROUTES
 // ==========================================
 app.use((req, res, next) => {
   res.status(404).json({
@@ -270,13 +455,11 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
-// 7. STRUCTURED MONGOOSE & GLOBAL ERROR HANDLER
-// Converts raw Mongoose errors into clean, structured JSON responses
+// 8. STRUCTURED GLOBAL ERROR HANDLER (Must be defined LAST)
 // ==========================================
 app.use((err, req, res, next) => {
   console.error('[ERROR HANDLER LOG]:', err.name, err.message);
 
-  // Mongoose Validation Error (e.g. required field missing or invalid enum)
   if (err.name === 'ValidationError') {
     const errorDetails = Object.values(err.errors || {}).map((e) => e.message);
     return res.status(400).json({
@@ -287,7 +470,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Mongoose CastError (invalid ObjectId format)
   if (err.name === 'CastError') {
     return res.status(400).json({
       error: 'Invalid ID Format',
@@ -296,7 +478,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Generic 500 Internal Server Error
   res.status(500).json({
     error: 'Something went wrong',
     message: err.message || 'Internal Server Error',
@@ -309,8 +490,9 @@ app.use((err, req, res, next) => {
 // ==========================================
 app.listen(PORT, () => {
   console.log(`==================================================`);
-  console.log(`🚀 Practical 5: Express + MongoDB Task API running on port ${PORT}`);
+  console.log(`🚀 Practical 7: Express + JWT Auth + MongoDB Task API on port ${PORT}`);
   console.log(`🌐 Web Client Tester UI: http://localhost:${PORT}`);
-  console.log(`📌 Tasks REST Endpoint: http://localhost:${PORT}/tasks`);
+  console.log(`🔑 Auth Endpoints: POST /register, POST /login, GET /me`);
+  console.log(`🔒 Protected Task Routes: /tasks (Requires Bearer Token)`);
   console.log(`==================================================`);
 });
