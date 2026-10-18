@@ -254,3 +254,31 @@ export const triggerSlowEvent = async (label) => {
   return await res.json();
 };
 
+// ==========================================
+// AI INTEGRATION API METHODS (Practical 13)
+// ==========================================
+
+export const generateAiDescription = async (title, currentDescription = '') => {
+  const res = await fetch(`${BASE_URL}/api/ai/generate-description`, {
+    method: 'POST',
+    headers: getHeaders(true),
+    body: JSON.stringify({ title, currentDescription })
+  });
+  const data = await res.json();
+  if (res.status === 429) {
+    throw new Error(data.message || 'Rate limit active: Please wait before requesting another AI description.');
+  }
+  return data;
+};
+
+export const getAiStatus = async () => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/ai/status`);
+    if (!res.ok) throw new Error('Failed to fetch AI status');
+    return await res.json();
+  } catch (err) {
+    return { enabled: true, fallback: true, error: err.message };
+  }
+};
+
+

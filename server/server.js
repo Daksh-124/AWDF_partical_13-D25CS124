@@ -21,6 +21,7 @@ const {
   getStatsSummary,
   resetStats
 } = require('./cache');
+const { generateDescription, aiRateLimiter } = require('./aiService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -327,6 +328,50 @@ app.get('/me', authMiddleware, async (req, res, next) => {
     res.status(200).json({ user: safeUser });
   } catch (err) {
     next(err);
+  }
+});
+
+// ==========================================
+// 5.5. AI INTEGRATION ROUTES (Practical 13)
+// ==========================================
+
+// GET /api/ai/status - Check AI configuration & provider status
+app.get('/api/ai/status', (req, res) => {
+  const apiKeyConfigured = Boolean(
+    process.env.OPENAI_API_KEY &&
+    process.env.OPENAI_API_KEY.trim() !== '' &&
+    !process.env.OPENAI_API_KEY.includes('your_key_here')
+  );
+
+  res.status(200).json({
+    enabled: true,
+    provider: apiKeyConfigured ? 'OpenAI' : 'Local Graceful Fallback',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    apiKeyConfigured,
+    rateLimit: 'Max 1 request per task per minute (client/title based)',
+    disclaimerRequired: true,
+    gracefulDegradation: 'Active (catches all API errors & supplies intelligent fallback)'
+  });
+});
+
+// POST /api/ai/generate-description - Generate task description using AI or fallback
+// Protected with rate limiter: 1 request per task title per minute
+app.post('/api/ai/generate-description', aiRateLimiter, async (req, res) => {
+  try {
+    const { title, currentDescription } = req.body;
+    const result = await generateDescription(title, currentDescription);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('[AI ROUTE ERROR]:', err.message);
+    // Graceful degradation: never crash or return 500
+    res.status(200).json({
+      description: `Review requirements and complete tasks for: ${req.body?.title || 'Task'}`,
+      suggestedPriority: 'medium',
+      fallback: true,
+      provider: 'Local Emergency Fallback',
+      error: err.message,
+      disclaimer: '⚠️ AI-generated suggestion: Please review, edit, and verify before saving.'
+    });
   }
 });
 

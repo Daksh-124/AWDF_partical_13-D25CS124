@@ -2517,3 +2517,92 @@ body {
 .diff-list li strong {
   color: var(--text-primary);
 }
+
+/* ==========================================================================
+   Practical 13: AI Integration & Responsible AI UI Styles
+   ========================================================================== */
+.label-with-ai-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.btn-ai-generate {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+}
+
+.btn-ai-generate:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  filter: brightness(1.08);
+}
+
+.btn-ai-generate:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+}
+
+.ai-suggestion-box {
+  margin-top: 8px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-left: 3px solid #6366f1;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.ai-suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ai-badge-chip {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-badge-fallback {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.ai-disclaimer-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #475569);
+  margin: 4px 0 2px;
+  line-height: 1.4;
+}
+
+.ai-hint-text {
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  display: block;
+}
+

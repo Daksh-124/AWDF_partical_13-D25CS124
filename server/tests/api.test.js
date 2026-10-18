@@ -70,6 +70,60 @@ describe('Full-Stack Task Management API Test Suite (Practical 12 CI/CD)', () =>
     expect(Array.isArray(res.body.events)).toBe(true);
   });
 
+  // 7. AI Service Status Endpoint (Practical 13)
+  test('GET /api/ai/status returns 200 with AI provider configuration', async () => {
+    const res = await request(app).get('/api/ai/status');
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('enabled', true);
+    expect(res.body).toHaveProperty('provider');
+    expect(res.body).toHaveProperty('gracefulDegradation');
+  });
+
+  // 8. AI Description Generation with Graceful Degradation (Practical 13)
+  test('POST /api/ai/generate-description returns 200 with description and disclaimer', async () => {
+    const res = await request(app)
+      .post('/api/ai/generate-description')
+      .send({
+        title: 'Configure JWT Auth and Bcrypt Hashing'
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('description');
+    expect(typeof res.body.description).toBe('string');
+    expect(res.body.description.length).toBeGreaterThan(10);
+    expect(res.body).toHaveProperty('disclaimer');
+    expect(res.body).toHaveProperty('suggestedPriority');
+  });
+
+  // 9. AI Description Validation - Empty Title (Negative Test)
+  test('POST /api/ai/generate-description without title returns 400 Bad Request', async () => {
+    const res = await request(app)
+      .post('/api/ai/generate-description')
+      .send({ title: '' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('error', 'Validation Error');
+  });
+
+  // 10. AI Rate Limiting (Supplementary Problem: max 1 per task per minute)
+  test('POST /api/ai/generate-description triggers 429 on rapid repeat request for same title', async () => {
+    // Unique title to avoid collision with test 8
+    const repeatTitle = 'Setup Docker Compose Multi-Container Orchestration ' + Date.now();
+    
+    // First call succeeds (200)
+    const firstRes = await request(app)
+      .post('/api/ai/generate-description')
+      .send({ title: repeatTitle });
+    expect(firstRes.statusCode).toBe(200);
+
+    // Second call immediately for the same title triggers rate limit (429)
+    const secondRes = await request(app)
+      .post('/api/ai/generate-description')
+      .send({ title: repeatTitle });
+    expect(secondRes.statusCode).toBe(429);
+    expect(secondRes.body).toHaveProperty('error', 'Rate Limit Exceeded');
+  });
+
   afterAll(async () => {
     const mongoose = require('mongoose');
     await mongoose.connection.close();

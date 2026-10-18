@@ -4,7 +4,7 @@ import ErrorMessage from './ErrorMessage';
 import Toast from './Toast';
 import AuthCard from './AuthCard';
 import TaskCardItem from './TaskCardItem';
-import { getTasks, createTask, updateTask, deleteTask, getDbStatus } from '../services/api';
+import { getTasks, createTask, updateTask, deleteTask, getDbStatus, generateAiDescription } from '../services/api';
 
 // Helper function for relative timestamps (e.g., "1 hour ago", "1 day ago")
 function timeAgo(dateString) {
@@ -45,6 +45,28 @@ function Projects({ currentUser, onAuthSuccess }) {
 
   // 6. Toast Notification State (Supplementary Problem)
   const [toast, setToast] = useState({ message: '', type: 'info' });
+
+  // 7. Practical 13: AI Suggestion & Rate Limit States
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiCooldown, setAiCooldown] = useState(0);
+  const [aiSuggestionState, setAiSuggestionState] = useState({
+    active: false,
+    provider: '',
+    disclaimer: '',
+    fallback: false,
+    reason: ''
+  });
+
+  // Cooldown countdown timer for AI requests (Supplementary Rate Limit)
+  useEffect(() => {
+    let timer;
+    if (aiCooldown > 0) {
+      timer = setInterval(() => {
+        setAiCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [aiCooldown]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -100,6 +122,49 @@ function Projects({ currentUser, onAuthSuccess }) {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle AI Description Generation (Practical 13)
+  const handleGenerateAiDescription = async () => {
+    if (!formData.title.trim()) {
+      showToast('Please enter a task title first before generating an AI description!', 'error');
+      return;
+    }
+
+    if (aiCooldown > 0) {
+      showToast(`Rate limit active: Please wait ${aiCooldown}s before requesting another AI suggestion.`, 'info');
+      return;
+    }
+
+    setIsGeneratingAi(true);
+    try {
+      const result = await generateAiDescription(formData.title.trim(), formData.description);
+      if (result.description) {
+        setFormData((prev) => ({
+          ...prev,
+          description: result.description,
+          priority: result.suggestedPriority || prev.priority
+        }));
+        setAiSuggestionState({
+          active: true,
+          provider: result.provider || (result.fallback ? 'Local Graceful Fallback' : 'OpenAI gpt-4o-mini'),
+          disclaimer: result.disclaimer || '⚠️ AI-generated suggestion: Please review, edit, and verify before saving.',
+          fallback: Boolean(result.fallback),
+          reason: result.reason || ''
+        });
+        setAiCooldown(60); // 60s rate limit window
+        showToast(
+          result.fallback
+            ? 'Intelligent fallback description applied (graceful degradation)!'
+            : 'AI description generated and applied to form!',
+          'success'
+        );
+      }
+    } catch (err) {
+      showToast(err.message || 'AI request failed. You can still type a description manually.', 'error');
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   // Handle Form Submit: Create (POST) or Update (PUT)
@@ -329,7 +394,30 @@ function Projects({ currentUser, onAuthSuccess }) {
                 </div>
 
                 <div className="input-group flex-3">
-                  <label htmlFor="description">Description</label>
+                  <div className="label-with-ai-action">
+                    <label htmlFor="description">Description</label>
+                    <button
+                      type="button"
+                      className="btn-ai-generate"
+                      onClick={handleGenerateAiDescription}
+                      disabled={isGeneratingAi || aiCooldown > 0 || isSubmitting}
+                      title={aiCooldown > 0 ? `Rate limit cooldown active: ${aiCooldown}s remaining` : 'Generate description with AI'}
+                    >
+                      {isGeneratingAi ? (
+                        <>
+                          <span className="spinner-dots">⏳</span> Generating AI...
+                        </>
+                      ) : aiCooldown > 0 ? (
+                        <>
+                          <span>⏳</span> Cooldown ({aiCooldown}s)
+                        </>
+                      ) : (
+                        <>
+                          <span>✨</span> Generate description
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     id="description"
@@ -339,6 +427,20 @@ function Projects({ currentUser, onAuthSuccess }) {
                     placeholder="e.g. Validate bcrypt password hashing and token generation"
                     disabled={isSubmitting}
                   />
+                  {aiSuggestionState.active && (
+                    <div className="ai-suggestion-box">
+                      <div className="ai-suggestion-header">
+                        <span className="ai-badge-chip">
+                          ✨ {aiSuggestionState.provider}
+                        </span>
+                        {aiSuggestionState.fallback && (
+                          <span className="ai-badge-fallback">Graceful Fallback Mode</span>
+                        )}
+                      </div>
+                      <p className="ai-disclaimer-text">{aiSuggestionState.disclaimer}</p>
+                      <small className="ai-hint-text">💡 This suggestion is editable — feel free to customize the text above before saving.</small>
+                    </div>
+                  )}
                 </div>
 
                 <div className="input-group flex-1">
