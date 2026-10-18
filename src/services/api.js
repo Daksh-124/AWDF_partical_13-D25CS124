@@ -230,3 +230,27 @@ export const flushCache = async () => {
   const res = await fetch(`${BASE_URL}/api/cache-flush`, { method: 'POST' });
   return await res.json();
 };
+
+// ==========================================
+// ASYNC EVENT LOGGING API (Practical 10)
+// ==========================================
+
+export const getEventLogs = async () => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/event-logs`);
+    if (!res.ok) throw new Error('Failed to fetch event logs');
+    return await res.json();
+  } catch (err) {
+    return { total: 0, events: [], error: err.message };
+  }
+};
+
+export const triggerSlowEvent = async (label) => {
+  const res = await fetch(`${BASE_URL}/api/test-slow-event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label: label || 'Slow Async Simulation from UI' })
+  });
+  return await res.json();
+};
+

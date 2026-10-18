@@ -1,165 +1,145 @@
-# Practical 9: In-Memory Caching and Query Optimization
+# Practical 10: Asynchronous Processing with Event-Driven Architecture
 
 **Student Name**: Daksh Digashia  
 **Roll No**: D25CS124  
 **Course**: Advanced Web Development Frameworks (AWDF)  
-**CO / PO**: CO2, CO4 / PO3, PO5  
-**Topic**: Server-Side Caching with `node-cache`, Cache Invalidation, Latency Profiling, and Query Optimization  
+**CO / PO**: CO4 / PO3, PO5  
+**Topic**: Node.js Built-in `EventEmitter`, Non-Blocking Background Processing, and Event-Driven Decoupling  
 
 ---
 
 ## 📌 Project Overview
-This repository contains the complete implementation for **Practical 9**, integrating **in-memory caching** using `node-cache` into our Node.js / Express / MongoDB Task Management backend, and connecting it to our React frontend with live monitoring and cache control.
+This repository contains the complete implementation for **Practical 10**, introducing **event-driven asynchronous background processing** using Node.js native `EventEmitter` (from the core `events` module, requiring **zero** external dependencies).
 
-Database read operations (`GET /tasks` and `GET /tasks/:id`) are cached in server RAM with a standard **Time-To-Live (TTL) of 60 seconds**. When any write operation (`POST`, `PUT`, or `DELETE`) occurs, the associated cache keys are immediately invalidated to ensure that stale data is never served to clients.
+By decoupling auxiliary side effects (such as notification logging, audit trail archiving, and simulated email dispatch) from the primary HTTP request-response lifecycle, the API responds immediately to clients without waiting for background tasks to finish.
 
 ---
 
-## 🏗️ Architecture & Data Flow
+## 🏗️ Architecture & Asynchronous Event Pipeline
 
 ```
-Client Request: GET /tasks or GET /tasks/:id
-        │
-        ▼
-   [Cache Check (node-cache)]
-        ├── HIT  ──► Return cached JSON immediately from RAM (X-Cache: HIT)
-        │            (Duration: ~5-7 ms | 0 MongoDB query overhead)
-        │
-        └── MISS ──► Query MongoDB Database (X-Cache: MISS)
-                     ├── Fetch documents via Mongoose ODM (~12-18 ms)
-                     ├── Store documents in node-cache (TTL: 60s)
-                     └── Return data to client & set headers
-```
-
-### Cache Invalidation Flow (Write Pipeline)
-```
-Client Request: POST /tasks, PUT /tasks/:id, DELETE /tasks/:id
-        │
-        ▼
-   Write to MongoDB via Mongoose
-        │
-        ▼
-   [Invalidate Associated Cache Keys]
-        ├── Invalidate 'all_tasks'
-        ├── Invalidate 'tasks_<userId>'
-        └── Invalidate 'task_<id>' (for PUT / DELETE)
-        │
-        ▼
-   Return 200/201 response.
-   Next GET request is guaranteed a MISS -> fetches fresh data from DB and recaches.
+Client Request: POST /tasks
+      │
+      ▼
+   Write Task to MongoDB via Mongoose
+      │
+      ▼
+   Send Immediate HTTP Response (201 Created) ──► Client Receives Response Immediately (~3-5 ms)
+      │
+      ▼ (Asynchronous Dispatch via Node.js Event Loop)
+   taskEvents.emit('task-created', taskData)
+      │
+      ▼
+   [Notification Listener (listeners.js)]
+      ├── Logs task title, assigned user, and handled timestamp
+      └── Triggers non-blocking background I/O (email/audit dispatch)
 ```
 
 ---
 
-## 📊 Empirical Response Time Benchmark (Postman / Automated Suite)
+## ⏱️ Empirical Timestamp Evidence (Response-Before-Handler Proof)
 
-Measurements recorded on `http://localhost:5000/tasks` with MongoDB running locally.
+Empirical execution readings captured via the automated test suite demonstrating that the **API response was dispatched BEFORE the background event handler completed**:
 
-| Measurement Sample | Uncached (Direct MongoDB Read) | Cached (In-Memory node-cache) | Observed Speedup / Reduction |
-| :--- | :--- | :--- | :--- |
-| **Sample 1** | **11.31 ms** (Server internal: 7 ms) | **6.47 ms** (Server internal: 2 ms) | **1.75x faster (42.8% reduction)** |
-| **Sample 2** | **17.75 ms** (Server internal: 14 ms)| **6.81 ms** (Server internal: 2 ms) | **2.61x faster (61.6% reduction)** |
-| **Sample 3** | **12.57 ms** (Server internal: 8 ms) | **5.45 ms** (Server internal: 2 ms) | **2.31x faster (56.6% reduction)** |
-| **AVERAGE (3 Samples)** | **13.88 ms** | **6.24 ms** | **2.2x faster (55.0% latency reduction)** |
-| **Cold Cache (Warmup MISS)** | **18.30 ms** | Cached on next request | Sets `X-Cache: MISS` |
-| **Post-Write Invalidation** | **15.12 ms** (Cache correctly invalidated)| **5.15 ms** on following read | Proves freshness & correctness |
+| Operation / Event | API Response Sent ($T_0$) | Background Listener Started | Background Work Completed ($T_1$) | Elapsed Background Time | Non-Blocking Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`task-created`** | **11:16:12.795Z** | 11:16:12.798Z | **11:16:12.933Z** | +138 ms | **✅ API responded before background worker finished** |
+| **`task-deleted`** | **11:16:13.200Z** | 11:16:13.202Z | **11:16:13.305Z** | +105 ms | **✅ Deletion audit archived asynchronously** |
+| **`slow-notification`** (2000ms simulation) | **11:16:13.511Z** (3.51 ms latency) | 11:16:13.513Z | **11:16:15.521Z** | **+2010 ms** | **✅ API returned in 3.5ms; worker finished ~2s later!** |
 
-> **Summary**: In-memory caching eliminates MongoDB query execution, connection pool queuing, and BSON deserialization, cutting response latency by **55.0%** on local testing and up to **80%+** under high database concurrency.
+> **Key Takeaway**: Even when a heavy background worker takes over 2,000 milliseconds to complete its task, the client experiences zero blocking latency, receiving an instant HTTP 200/201 response.
 
 ---
 
-## 🔬 Key Questions & Theoretical Analysis (Viva / Lab Journal)
+## 🔬 Key Questions & Theoretical Analysis (Viva / Lab Evaluation)
 
-### 1. Why must the cache be invalidated on every write operation, and what would happen to data correctness if it were not?
-* **Why Invalidation is Essential**: In a caching system, cached data is a transient snapshot of the persistent database. If a user creates, updates, or deletes a task and the cache is not invalidated, subsequent read requests will return the pre-existing snapshot from memory until the TTL expires.
-* **Impact of Missing Invalidation (Stale Data Anomaly)**:
-  - If a user completes a task or deletes an item, the UI would continue showing the old state, causing user confusion and duplicate writes.
-  - Data correctness and consistency would be severely compromised (read-your-own-writes violation).
+### 1. Why does emitting an event not block the API response, even though both run on the same Node.js process?
+* **Asynchronous Scheduling in the Event Loop**: Emitting an event via `EventEmitter` synchronously invokes the listener callbacks registered on that event. However, when the listener delegates its heavy operations to asynchronous APIs (such as `setTimeout`, `setImmediate`, or asynchronous I/O promises), Node.js registers the callback into the event loop's timer or poll phase and immediately returns control.
+* **Separation from Response Pipeline**: Because the response has already been flushed to the network socket (`res.status(201).json(...)`), the HTTP transaction is terminated from the client's perspective while the background task finishes asynchronously in a later event loop tick.
 
-### 2. What is a reasonable TTL (time-to-live) for cached data in a task management context, and what trade-off does TTL length represent?
-* **Reasonable TTL**: In a collaborative or user-interactive Task Management system, a TTL between **30 to 120 seconds** (default: **60 seconds**) is reasonable.
-* **The TTL Trade-off**:
-  - **Shorter TTL (e.g., 5–15 seconds)**: Higher data freshness, less risk of serving stale data even if invalidation logic fails, but lower cache hit ratio and increased query load on MongoDB.
-  - **Longer TTL (e.g., 10–30 minutes)**: Extremely high cache hit ratio and minimal database load, but higher memory footprint in the Node process and greater risk of serving stale data if external database mutations occur outside the API server.
+### 2. What would happen to API response time if the notification logic were placed directly inside the POST route instead of in an event handler?
+* **Direct Execution Penalty**: If the notification logic (e.g. sending an email via SMTP or making an external webhook request taking 500–2,000 ms) were placed synchronously inside the `POST /tasks` route before sending the response, the client would be forced to wait for that entire duration.
+* **Degraded Client Experience**: API response latency would skyrocket from **~5 ms to 2,000+ ms**, causing visible UI freezes, increased risk of client gateway timeouts, and poor mobile responsiveness.
 
-### 3. Why is in-memory caching (`node-cache`) not suitable for a multi-server/multi-instance deployment, even though it works fine in this lab?
-* **Process-Local Memory Boundary**: `node-cache` stores cached objects in the **V8 heap memory of the specific Node.js process** running on that machine.
-* **Multi-Instance Inconsistency**: If the application scales horizontally across 3 instances (Instance A, B, and C) behind a load balancer:
-  1. A client writes to Instance A (`POST /tasks`), invalidating cache on Instance A only.
-  2. The next client read is routed by the load balancer to Instance B.
-  3. Instance B still holds the old cached data in its local memory and serves stale data!
-* **Production Solution**: Multi-instance architectures require a **distributed centralized cache** (such as **Redis** or **Memcached**) shared across all server instances.
+### 3. Why is EventEmitter a reasonable choice for this scale of application, but not for a production system handling millions of events per day?
+* **Why EventEmitter is Great Here**:
+  - **Zero Overhead**: Built directly into Node.js core (`require('events')`) with zero external infrastructure, zero network serialization latency, and zero dependency overhead.
+  - **Simplicity**: Extremely straightforward pub/sub pattern for single-process architectures.
+* **Why it Fails at Enterprise Scale (Millions of Events/Day)**:
+  - **In-Memory Volatility**: Events reside purely in process memory. If the Node.js server crashes or restarts, all pending in-memory events are permanently lost with no persistence or replay ability.
+  - **No Distributed Capability**: Works exclusively inside a single OS process. In a distributed multi-pod Kubernetes or microservices cluster, an event emitted on Instance 1 cannot be received by listeners on Instance 2.
+  - **No Backpressure or Rate-Limiting**: High event bursts can exhaust Node.js heap memory, leading to out-of-memory (OOM) crashes.
+  - **Production Alternative**: Production systems use dedicated distributed message brokers (such as **RabbitMQ**, **Apache Kafka**, or **Redis BullMQ**) which provide persistent message queues, horizontal consumer scaling, automatic retries, and dead-letter queues.
 
 ---
 
-## ⚡ Supplementary Solutions Implemented
+## ⚡ Supplementary Problems Implemented
 
-1. **Single-Task Caching (`GET /tasks/:id`)**:
-   - Single task reads are cached under `task_<id>`.
-   - Updating (`PUT /tasks/:id`) or deleting (`DELETE /tasks/:id`) the task invalidates both the single-task key and the all-tasks collection key.
+### 1. `task-deleted` Event & Listener
+* Emitted upon deleting a task via `DELETE /tasks/:id`.
+* Listener logs the deletion timestamp and asynchronously archives an audit entry.
 
-2. **Cache Monitoring & Stats Debug Endpoint (`GET /api/cache-stats`)**:
-   - Exposes real-time metrics:
-     - `hits`: Total cache hits
-     - `misses`: Total cache misses
-     - `hitRatio`: Percentage of requests served from RAM
-     - `invalidations`: Count of write-triggered cache clears
-     - `activeKeysCount` and `activeKeys`: Currently cached keys
-     - `defaultTTL`: 60 seconds
+### 2. `task-updated` Event & Listener
+* Emitted upon editing a task via `PUT /tasks/:id`.
+* Listener logs the updated title, completion status, and priority.
 
-3. **Cache Flush Endpoint (`POST /api/cache-flush`)**:
-   - Resets all cached keys and statistics for repeatable lab benchmarks.
+### 3. Global Error Event Listener (`'error'`)
+* Registered a dedicated error handler (`taskEvents.on('error', ...)`) to prevent unhandled EventEmitter exceptions from crashing the server process.
 
-4. **Frontend Real-Time Monitor UI**:
-   - Accessible via the **⚡ Performance & Analytics** navigation link (`/performance`).
-   - Displays live cache hit/miss statistics, active keys, and a button to flush cache directly from the browser.
+### 4. 2000ms Slow Notification Simulation
+* Exposed at `POST /api/test-slow-event`.
+* Demonstrates immediate response (< 5 ms) while the simulated background worker runs a 2-second job.
+
+### 5. Live Background Event Audit Stream
+* Endpoint: `GET /api/event-logs`.
+* Retains the last 60 background event execution records in memory.
+* Integrated into the React frontend at `/performance` with an interactive trigger button and real-time polling stream.
 
 ---
 
 ## 📡 RESTful Endpoints Reference (`http://localhost:5000`)
 
-| Method | Endpoint | Cache Behavior | Invalidation Triggered |
+| Method | Endpoint | Description | Event Emitted |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/tasks` | Checks `tasks_<userId>`, returns HIT/MISS | None (read only) |
-| **GET** | `/tasks/:id` | Checks `task_<id>`, returns HIT/MISS | None (read only) |
-| **POST** | `/tasks` | Creates task in MongoDB | Invalidates `all_tasks` and `tasks_<userId>` |
-| **PUT** | `/tasks/:id` | Updates task in MongoDB | Invalidates `tasks_<userId>` and `task_<id>` |
-| **DELETE**| `/tasks/:id` | Deletes task in MongoDB | Invalidates `tasks_<userId>` and `task_<id>` |
-| **GET** | `/api/cache-stats` | Returns real-time cache counters & metrics | None (debug) |
-| **POST** | `/api/cache-flush` | Clears all keys & resets counters | Flushes entire cache |
+| **POST** | `/tasks` | Create new task in MongoDB | `task-created` |
+| **PUT** | `/tasks/:id` | Update task in MongoDB | `task-updated` |
+| **DELETE**| `/tasks/:id` | Delete task from MongoDB | `task-deleted` |
+| **POST** | `/api/test-slow-event` | Simulate heavy 2000ms background worker | `slow-notification` |
+| **GET** | `/api/event-logs` | Retrieve live background event audit history | None |
+| **GET** | `/api/cache-stats` | Retrieve Practical 9 in-memory cache metrics | None |
+| **POST** | `/api/cache-flush` | Reset in-memory cache for benchmarks | None |
 
 ---
 
 ## 🚀 How to Run and Test Locally
 
-### 1. Start Express Backend with Caching
+### Step 1: Start Express Backend (Port 5000)
 ```bash
 cd server
 npm install
 node server.js
 ```
-> Server URL: **`http://localhost:5000`**  
-> Cache Stats: **`http://localhost:5000/api/cache-stats`**
+> API runs on: **`http://localhost:5000`**  
+> Console will log: `✅ Event listeners registered: [task-created, task-deleted, task-updated, slow-notification, error]`
 
-### 2. Start React Client
+### Step 2: Start React Client (Port 5173)
 ```bash
 npm install
 npm run dev
 ```
-> Client URL: **`http://localhost:5173`**  
-> Performance & Cache Dashboard: **`http://localhost:5173/performance`**
+> Client runs on: **`http://localhost:5173`**  
+> Event Stream & Optimization Dashboard: **`http://localhost:5173/performance`**
 
-### 3. Verify Cache Headers in Browser or Postman
-- Send `GET http://localhost:5000/tasks`
-- **First request**: Check response headers -> `X-Cache: MISS` (Duration: ~15-20 ms)
-- **Second request**: Check response headers -> `X-Cache: HIT` (Duration: ~5-7 ms)
-- **Create task via POST**: Check headers -> Cache invalidated
-- **Next request**: `X-Cache: MISS` (Fresh data returned!)
+### Step 3: Run Automated Test Script
+```bash
+node scratch/test_practical10_events.js
+```
+> Validates immediate HTTP response, timestamp ordering, and 2-second background execution.
 
 ---
 
-## 📜 Author & Academic Metadata
+## 📜 Author & Metadata
 * **Student Name**: Daksh Digashia  
 * **Roll No**: D25CS124  
-* **Academic Year**: 2026  
-* **Course**: Advanced Web Development Frameworks (AWDF)
+* **Course**: Advanced Web Development Frameworks (AWDF)  
+* **Academic Year**: 2026

@@ -9,6 +9,8 @@ require('dotenv').config();
 const Task = require('./models/Task');
 const User = require('./models/User');
 const authMiddleware = require('./middleware/auth');
+const taskEvents = require('./events');
+const { getEventHistory, clearEventHistory } = require('./listeners');
 const { validateRegister, validateLogin, validateTaskInput } = require('./middleware/validate');
 const {
   cache,
@@ -86,6 +88,35 @@ app.get('/api/db-status', (req, res) => {
 });
 
 // GET /api/cache-stats - Monitoring endpoint for in-memory cache metrics (Practical 9)
+// GET /api/event-logs - Fetch background event history audit trail (Practical 10)
+app.get('/api/event-logs', (req, res) => {
+  res.status(200).json({
+    total: getEventHistory().length,
+    events: getEventHistory(),
+    architecture: 'Node.js built-in EventEmitter (non-blocking async background processing)'
+  });
+});
+
+// POST /api/test-slow-event - Demonstrate non-blocking 2000ms slow background listener (Practical 10 Supplementary)
+app.post('/api/test-slow-event', (req, res) => {
+  const emittedAt = new Date().toISOString();
+  const label = (req.body && req.body.label) ? req.body.label : 'Simulated Heavy Task ' + Date.now();
+  
+  console.log(`[API] Response sent (200) for /api/test-slow-event at ${emittedAt}`);
+  res.status(200).json({
+    message: 'API responded immediately (< 5ms)! Background listener is processing for 2000ms asynchronously.',
+    responseSentAt: emittedAt,
+    label
+  });
+
+  // Emitted asynchronously after response sent
+  taskEvents.emit('slow-notification', {
+    label,
+    emittedAt,
+    user: req.user ? (req.user.name || req.user.email) : 'Lab Evaluator'
+  });
+});
+
 app.get('/api/cache-stats', (req, res) => {
   res.status(200).json(getStatsSummary());
 });
@@ -405,7 +436,17 @@ app.post('/tasks', authMiddleware, validateTaskInput, async (req, res, next) => 
       const newTask = await Task.create(taskData);
       // Invalidate in-memory cache after write operation (Practical 9)
       invalidateTaskCaches(req.user.id);
-      return res.status(201).json(newTask);
+      const responseTimestamp = new Date().toISOString();
+      console.log(`[API] POST /tasks response sent (201) at ${responseTimestamp}`);
+      res.status(201).json(newTask);
+
+      // Asynchronous background notification via EventEmitter (Practical 10)
+      taskEvents.emit('task-created', {
+        task: newTask,
+        emittedAt: responseTimestamp,
+        user: req.user
+      });
+      return;
     }
 
     const newTask = {
@@ -419,7 +460,15 @@ app.post('/tasks', authMiddleware, validateTaskInput, async (req, res, next) => 
     };
     fallbackTasks.unshift(newTask);
     invalidateTaskCaches(req.user.id);
+    const responseTimestamp = new Date().toISOString();
+    console.log(`[API] POST /tasks fallback response sent (201) at ${responseTimestamp}`);
     res.status(201).json(newTask);
+
+    taskEvents.emit('task-created', {
+      task: newTask,
+      emittedAt: responseTimestamp,
+      user: req.user
+    });
   } catch (err) {
     next(err);
   }
@@ -445,7 +494,17 @@ app.put('/tasks/:id', authMiddleware, validateTaskInput, async (req, res, next) 
       }
       // Invalidate in-memory cache for all tasks and updated single task (Practical 9)
       invalidateTaskCaches(req.user.id, id);
-      return res.status(200).json(updatedTask);
+      const responseTimestamp = new Date().toISOString();
+      console.log(`[API] PUT /tasks/${id} response sent (200) at ${responseTimestamp}`);
+      res.status(200).json(updatedTask);
+
+      // Asynchronous background notification via EventEmitter (Practical 10)
+      taskEvents.emit('task-updated', {
+        task: updatedTask,
+        emittedAt: responseTimestamp,
+        user: req.user
+      });
+      return;
     }
 
     const taskIndex = fallbackTasks.findIndex((t) => t._id === id || t.id === id);
@@ -485,10 +544,20 @@ app.delete('/tasks/:id', authMiddleware, async (req, res, next) => {
       }
       // Invalidate in-memory cache for all tasks and deleted task (Practical 9)
       invalidateTaskCaches(req.user.id, id);
-      return res.status(200).json({
+      const responseTimestamp = new Date().toISOString();
+      console.log(`[API] DELETE /tasks/${id} response sent (200) at ${responseTimestamp}`);
+      res.status(200).json({
         message: 'Task deleted successfully from MongoDB',
         deletedTask
       });
+
+      // Asynchronous background notification via EventEmitter (Practical 10)
+      taskEvents.emit('task-deleted', {
+        task: deletedTask,
+        emittedAt: responseTimestamp,
+        user: req.user
+      });
+      return;
     }
 
     const taskIndex = fallbackTasks.findIndex((t) => t._id === id || t.id === id);

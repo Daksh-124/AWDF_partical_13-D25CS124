@@ -8,7 +8,7 @@ function NavBar({ isDarkMode, toggleTheme, currentUser, onLogout, onOpenAuth }) 
         <NavLink to="/" className="brand-logo">
           <span className="brand-icon">⚡</span>
           <span className="brand-text">Daksh<span className="brand-accent">.dev</span></span>
-          <span className="version-pill">AWDF P-8</span>
+          <span className="version-pill">AWDF P-10</span>
         </NavLink>
 
         <ul className="nav-menu">
