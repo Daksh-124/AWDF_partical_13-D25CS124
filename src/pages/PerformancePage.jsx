@@ -101,37 +101,115 @@ function PerformancePage() {
       {/* Hero Header */}
       <div className="performance-hero-card">
         <div className="perf-badge-row">
-          <span className="perf-badge">🚀 Practical 8, 9 &amp; 10</span>
-          <span className="perf-badge">CO1, CO2, CO4 / PO3, PO5</span>
-          <span className="perf-badge">Lazy Loading • Caching • EventEmitter</span>
+          <span className="perf-badge">🚀 Practical 8, 9, 10 &amp; 11</span>
+          <span className="perf-badge">CO1, CO2, CO4, CO5 / PO3, PO5</span>
+          <span className="perf-badge">Docker Compose • Multi-Container</span>
         </div>
-        <h1 className="perf-title">Advanced Full-Stack Optimization Suite</h1>
+        <h1 className="perf-title">Containerized Full-Stack Cloud Architecture</h1>
         <p className="perf-subtitle">
-          Demonstrating frontend bundle reduction with <code>React.lazy()</code> &amp; <code>&lt;Suspense&gt;</code> (P-8),
-          server query acceleration with <code>node-cache</code> (P-9), and non-blocking background processing using Node.js native <code>EventEmitter</code> (P-10).
+          Orchestrating our complete full-stack React frontend, Express API with JWT &amp; in-memory caching,
+          and persistent MongoDB database into isolated Docker containers connected across a private bridge network.
         </p>
 
         <div className="perf-metrics-grid">
-          <div className="metric-box">
-            <span className="metric-num">~142 kB</span>
-            <span className="metric-label">Initial JS Bundle</span>
-            <span className="metric-sub">-51.3% payload reduction via code splitting (P-8)</span>
-          </div>
           <div className="metric-box highlight">
-            <span className="metric-num">6.24 ms</span>
-            <span className="metric-label">Cached DB Latency</span>
-            <span className="metric-sub">node-cache RAM hit: 2.2x speedup (P-9)</span>
-          </div>
-          <div className="metric-box highlight">
-            <span className="metric-num">3.51 ms</span>
-            <span className="metric-label">Async API Response</span>
-            <span className="metric-sub">Instant return while 2000ms job runs in background (P-10)</span>
+            <span className="metric-num">3 Services</span>
+            <span className="metric-label">Docker Compose</span>
+            <span className="metric-sub">frontend (5173) + backend (5000) + mongodb (27017)</span>
           </div>
           <div className="metric-box">
-            <span className="metric-num">100% Native</span>
-            <span className="metric-label">Zero External Queue</span>
-            <span className="metric-sub">Node.js core events module (no Redis needed)</span>
+            <span className="metric-num">1 Command</span>
+            <span className="metric-label">One-Step Startup</span>
+            <span className="metric-sub"><code>docker-compose up --build</code> launches everything</span>
           </div>
+          <div className="metric-box highlight">
+            <span className="metric-num">Multi-Stage</span>
+            <span className="metric-label">Frontend Dockerfile</span>
+            <span className="metric-sub">Alpine Linux build stage + stripped runner</span>
+          </div>
+          <div className="metric-box">
+            <span className="metric-num">Named Volume</span>
+            <span className="metric-label">Data Persistence</span>
+            <span className="metric-sub"><code>task-mongo-data</code> survives container restarts</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Practical 11: Docker Containerization Architecture Card */}
+      <div className="perf-comparison-card">
+        <div className="cache-monitor-header">
+          <div>
+            <span className="chart-pill-badge" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#0284c7', borderColor: 'rgba(2, 132, 199, 0.3)' }}>
+              🐳 Practical 11: Container Orchestration
+            </span>
+            <h3 className="section-heading">Docker Compose Multi-Container Network Topology</h3>
+            <p className="chart-section-desc">
+              All services run in isolated Alpine Linux containers linked over <code>app-network</code> with internal DNS resolution.
+            </p>
+          </div>
+          <div className="cache-actions-btn-group">
+            <span className="docker-badge-active">🐳 Docker Compose Active</span>
+          </div>
+        </div>
+
+        {/* Container Topology Table */}
+        <div className="comparison-table-wrapper">
+          <table className="perf-table">
+            <thead>
+              <tr>
+                <th>Service Name</th>
+                <th>Container Image / Build</th>
+                <th>Internal Container Port</th>
+                <th>Host Port Mapping</th>
+                <th>Inter-Service DNS / Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>frontend</strong></td>
+                <td>Multi-stage Alpine (<code>Dockerfile</code>)</td>
+                <td><code>5173</code></td>
+                <td><span className="badge-green">5173:5173</span></td>
+                <td>React Single-Page Client (served via Vite preview)</td>
+              </tr>
+              <tr>
+                <td><strong>backend</strong></td>
+                <td>Node 18 Alpine (<code>server/Dockerfile</code>)</td>
+                <td><code>5000</code></td>
+                <td><span className="badge-green">5000:5000</span></td>
+                <td>Express REST API, JWT auth, node-cache, EventEmitter</td>
+              </tr>
+              <tr>
+                <td><strong>mongodb</strong></td>
+                <td>Official <code>mongo:6.0</code></td>
+                <td><code>27017</code></td>
+                <td><span className="badge-green">27017:27017</span></td>
+                <td>Persistent document database (Volume: <code>mongo-data</code>)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Practical 10 vs 11 Differences Banner */}
+        <div className="diff-highlight-card">
+          <h4 className="diff-title">🔍 Architectural Changes: Practical 10 vs. Practical 11</h4>
+          <ul className="diff-list">
+            <li>
+              <strong>Host Process vs. Container Isolation:</strong> Practical 10 ran bare-metal on Windows as separate <code>node</code> and <code>npm</code> host processes. Practical 11 encapsulates all services into standardized Linux containers with isolated filesystems.
+            </li>
+            <li>
+              <strong>Manual Multi-Terminal Start vs. Single Command:</strong> Practical 10 required manually launching MongoDB, then backend in terminal 1, then Vite in terminal 2. Practical 11 boots the entire stack with a single <code>docker-compose up --build</code> command.
+            </li>
+            <li>
+              <strong>Loopback (127.0.0.1) vs. Docker DNS:</strong> In Practical 10, the backend connected to MongoDB via <code>localhost:27017</code>. In Practical 11, each container has its own network stack, so the backend uses Compose service DNS: <code>mongodb://mongodb:27017/taskmanager</code>.
+            </li>
+            <li>
+              <strong>Ephemeral vs. Named Volume Storage:</strong> In Practical 11, container storage is ephemeral by default, so we added a Docker named volume (<code>mongo-data:/data/db</code>) to ensure task records persist across container destruction.
+            </li>
+            <li>
+              <strong>Multi-Stage Dockerfile &amp; .dockerignore:</strong> Practical 11 implements a 2-stage build for React to minimize image footprint, and excludes <code>node_modules</code> via <code>.dockerignore</code> to ensure clean container-native builds.
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -283,17 +361,6 @@ function PerformancePage() {
           </div>
         </div>
 
-        {cacheStats.activeKeys && cacheStats.activeKeys.length > 0 && (
-          <div className="active-keys-viewer">
-            <span className="keys-label">Active Keys in Cache:</span>
-            <div className="keys-badges">
-              {cacheStats.activeKeys.map((key) => (
-                <span key={key} className="key-badge">🔑 {key}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Empirical Response Time Comparison Table for Practical 9 */}
         <h4 className="sub-table-heading">📊 Empirical Response Time Readings (Sample Data for Lab Journal)</h4>
         <div className="comparison-table-wrapper">
@@ -330,55 +397,6 @@ function PerformancePage() {
                 <td><strong>13.88 ms</strong></td>
                 <td><strong className="text-success">6.24 ms</strong></td>
                 <td><strong className="text-success">2.2x faster (55.0% latency reduction)</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Practical 8: Frontend Code Splitting Comparison Table */}
-      <div className="perf-comparison-card">
-        <h3 className="section-heading">📈 Frontend Code Splitting Comparison (Practical 8)</h3>
-        <div className="comparison-table-wrapper">
-          <table className="perf-table">
-            <thead>
-              <tr>
-                <th>Metric / Resource</th>
-                <th>Before (Practical 7 Baseline)</th>
-                <th>After (Practical 8 Lazy Loaded)</th>
-                <th>Performance Benefit</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Initial JS Bundle</strong></td>
-                <td><span className="badge-red">292.68 kB (90.79 kB gzip)</span></td>
-                <td><span className="badge-green">~142.5 kB (44.2 kB gzip)</span></td>
-                <td><strong>51.3% reduction in first-load JS</strong></td>
-              </tr>
-              <tr>
-                <td><strong>Route Bundling Strategy</strong></td>
-                <td>All routes loaded upfront in 1 file</td>
-                <td>Split into <code>Home</code>, <code>Projects</code>, <code>Contact</code> chunks</td>
-                <td>Browser downloads only active route code</td>
-              </tr>
-              <tr>
-                <td><strong>Heavy Library (Chart.js)</strong></td>
-                <td>Would block first paint if bundled upfront</td>
-                <td>Lazy-loaded isolated chunk (~205 kB)</td>
-                <td>Zero penalty for users browsing tasks/home</td>
-              </tr>
-              <tr>
-                <td><strong>Slow 3G Perceived Load Time</strong></td>
-                <td>~3.85s blank screen delay</td>
-                <td>~1.20s initial paint + responsive Suspense fallback</td>
-                <td>Faster First Contentful Paint (FCP)</td>
-              </tr>
-              <tr>
-                <td><strong>Re-render Optimization</strong></td>
-                <td>Entire list re-renders on search input</td>
-                <td><code>React.memo</code> on Task items + <code>useMemo</code></td>
-                <td>DevTools Profiler: 0 wasted renders on unchanged tasks</td>
               </tr>
             </tbody>
           </table>

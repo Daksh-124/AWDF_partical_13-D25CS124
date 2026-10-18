@@ -630,11 +630,15 @@ app.use((err, req, res, next) => {
 // ==========================================
 // SERVER START
 // ==========================================
-app.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(`🚀 Practical 7: Express + JWT Auth + MongoDB Task API on port ${PORT}`);
-  console.log(`🌐 Web Client Tester UI: http://localhost:${PORT}`);
-  console.log(`🔑 Auth Endpoints: POST /register, POST /login, GET /me`);
-  console.log(`🔒 Protected Task Routes: /tasks (Requires Bearer Token)`);
-  console.log(`==================================================`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(`🚀 Practical 7: Express + JWT Auth + MongoDB Task API on port ${PORT}`);
+    console.log(`🌐 Web Client Tester UI: http://localhost:${PORT}`);
+    console.log(`🔑 Auth Endpoints: POST /register, POST /login, GET /me`);
+    console.log(`🔒 Protected Task Routes: /tasks (Requires Bearer Token)`);
+    console.log(`==================================================`);
+  });
+}
+
+module.exports = app;

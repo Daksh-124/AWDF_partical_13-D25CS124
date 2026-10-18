@@ -1,0 +1,85 @@
+name: Full-Stack CI Pipeline
+
+# ==============================================================================
+# Practical 12: Continuous Integration & Automated Testing Pipeline
+# Student: Daksh Digashia (Roll No: D25CS124) | Course: AWDF
+# Triggers: Runs automatically on every push or pull request to the main branch
+# ==============================================================================
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # Job 1: Linting & Code Quality Verification (Supplementary Problem)
+  # ----------------------------------------------------------------------------
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Run Fast Static Code Linter (oxlint)
+        run: npm run lint
+
+  # ----------------------------------------------------------------------------
+  # Job 2: Build & Automated Testing Pipeline
+  # ----------------------------------------------------------------------------
+  build-and-test:
+    name: Build & Automated API Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Build React Production Distribution (Vite)
+        run: npm run build
+
+      - name: Install Backend Test Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run Automated Backend Integration Tests (Jest + Supertest)
+        working-directory: ./server
+        env:
+          NODE_ENV: test
+          JWT_SECRET: jwt_secret_practical7_daksh_d25cs124
+          PORT: 5001
+        run: npm test
+
+  # ----------------------------------------------------------------------------
+  # Job 3: Docker Container Build Verification (Integration with Practical 11)
+  # ----------------------------------------------------------------------------
+  docker-build-check:
+    name: Docker Containerization Build Validation
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Compose Syntax & Build Containers
+        run: docker compose build

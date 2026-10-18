@@ -1,140 +1,147 @@
-# Practical 10: Asynchronous Processing with Event-Driven Architecture
+# Practical 12: CI/CD Pipeline with GitHub Actions
+
+[![CI Pipeline](https://github.com/Daksh-124/AWDF_partical_12-D25CS124/actions/workflows/ci.yml/badge.svg)](https://github.com/Daksh-124/AWDF_partical_12-D25CS124/actions)
 
 **Student Name**: Daksh Digashia  
 **Roll No**: D25CS124  
 **Course**: Advanced Web Development Frameworks (AWDF)  
-**CO / PO**: CO4 / PO3, PO5  
-**Topic**: Node.js Built-in `EventEmitter`, Non-Blocking Background Processing, and Event-Driven Decoupling  
+**CO / PO**: CO5 / PO3, PO5  
+**Topic**: Continuous Integration (CI), GitHub Actions Workflow, Automated Jest & Supertest Testing, Code Quality Linting, and Container Build Verification  
 
 ---
 
 ## 📌 Project Overview
-This repository contains the complete implementation for **Practical 10**, introducing **event-driven asynchronous background processing** using Node.js native `EventEmitter` (from the core `events` module, requiring **zero** external dependencies).
+This repository contains the complete implementation for **Practical 12**, establishing an enterprise-grade **Continuous Integration & Automated Testing Pipeline** using **GitHub Actions**.
 
-By decoupling auxiliary side effects (such as notification logging, audit trail archiving, and simulated email dispatch) from the primary HTTP request-response lifecycle, the API responds immediately to clients without waiting for background tasks to finish.
+Whenever code is pushed or a pull request is submitted to the `main` branch, the CI pipeline automatically runs in a GitHub-hosted cloud virtual machine (`ubuntu-latest`). It checks out the codebase, sets up the Node.js runtime, installs dependencies, lints source code using `oxlint`, executes automated backend integration tests using **Jest** and **Supertest**, verifies the React Vite production build, and validates Docker Compose container buildability.
 
 ---
 
-## 🏗️ Architecture & Asynchronous Event Pipeline
+## 🔄 What Changed from Practical 11 to Practical 12?
+
+| Feature / Aspect | Practical 11 (Containerization) | Practical 12 (CI/CD Pipeline) |
+| :--- | :--- | :--- |
+| **Primary Goal** | Package app & dependencies into reproducible Docker containers (`Dockerfile`, `docker-compose.yml`). | Automate linting, building, and running test assertions on every code push via GitHub Actions. |
+| **Execution Context** | **Local Machine**: Developer manually executes `docker-compose up` to run containers locally. | **Cloud Runners**: Hosted virtual machines (`ubuntu-latest`) spin up automatically upon git events (`push` / `pull_request`). |
+| **Automated Testing** | ❌ **No automated test assertions**. Containers only verified that services started and port 5000/5173 was open. | ✅ **Jest & Supertest Test Suite**: Programmatic test assertions verifying status codes, auth headers, token signing, cache hits, and event logging. |
+| **Pipeline Workflow** | ❌ None. Manual multi-step build (`docker-compose build`). | ✅ **Declarative Workflow (`.github/workflows/ci.yml`)**: Automated multi-stage pipeline (`lint` ➔ `build-and-test` ➔ `docker-build-check`). |
+| **Quality Gate / Barrier** | Broken code or logic regressions would still build and deploy into Docker containers undetected. | ❌ Broken tests or lint errors fail the build (Red ❌), blocking faulty code before reaching staging/production. |
+| **Visibility & Feedback** | Console terminal outputs on localhost. | Green checkmark (✔) / Red X (✖) badges directly inside GitHub commits and pull requests. |
+
+---
+
+## 🏗️ GitHub Actions CI Pipeline Architecture
 
 ```
-Client Request: POST /tasks
-      │
-      ▼
-   Write Task to MongoDB via Mongoose
-      │
-      ▼
-   Send Immediate HTTP Response (201 Created) ──► Client Receives Response Immediately (~3-5 ms)
-      │
-      ▼ (Asynchronous Dispatch via Node.js Event Loop)
-   taskEvents.emit('task-created', taskData)
-      │
-      ▼
-   [Notification Listener (listeners.js)]
-      ├── Logs task title, assigned user, and handled timestamp
-      └── Triggers non-blocking background I/O (email/audit dispatch)
+                   git push origin main / Pull Request
+                                    │
+                                    ▼
+                     GitHub Actions Webhook Trigger
+                                    │
+                     ┌──────────────┴──────────────┐
+                     │ Job 1: lint                 │
+                     │ - Node 20 Setup             │
+                     │ - oxlint (Code Quality)     │
+                     └──────────────┬──────────────┘
+                                    │ (needs: lint)
+                                    ▼
+                     ┌─────────────────────────────┐
+                     │ Job 2: build-and-test       │
+                     │ - Vite Frontend Build       │
+                     │ - Jest + Supertest Suite    │
+                     │   * 6 Automated Assertions  │
+                     └──────────────┬──────────────┘
+                                    │ (needs: build-and-test)
+                                    ▼
+                     ┌─────────────────────────────┐
+                     │ Job 3: docker-build-check   │
+                     │ - Docker Compose Build      │
+                     │ - Container Syntax Validation│
+                     └──────────────┬──────────────┘
+                                    │
+         ┌──────────────────────────┴──────────────────────────┐
+         ▼                                                     ▼
+ ✅ Pipeline Passed (Green ✔)                         ❌ Pipeline Failed (Red ✖)
+ Ready for deployment / merge                        Blocks merge; logs exact error
 ```
 
 ---
 
-## ⏱️ Empirical Timestamp Evidence (Response-Before-Handler Proof)
+## 📁 CI/CD Pipeline Implementation Details
 
-Empirical execution readings captured via the automated test suite demonstrating that the **API response was dispatched BEFORE the background event handler completed**:
+### 1. Workflow Configuration (`.github/workflows/ci.yml`)
+Located at `.github/workflows/ci.yml`, configured with:
+* **Triggers**: `push` and `pull_request` on `branches: [main]`.
+* **Job 1 (`lint`)**: Installs dependencies and runs static analysis (`oxlint`) to catch syntax flaws, unused variables, and formatting issues early.
+* **Job 2 (`build-and-test`)**: Depends on `lint`. Builds the production Vite bundle (`npm run build`) and runs the backend test suite via `npm test` with `NODE_ENV=test`.
+* **Job 3 (`docker-build-check`)**: Verifies that the multi-container configuration from Practical 11 builds successfully (`docker compose build`) without runtime regressions.
 
-| Operation / Event | API Response Sent ($T_0$) | Background Listener Started | Background Work Completed ($T_1$) | Elapsed Background Time | Non-Blocking Verification |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`task-created`** | **11:16:12.795Z** | 11:16:12.798Z | **11:16:12.933Z** | +138 ms | **✅ API responded before background worker finished** |
-| **`task-deleted`** | **11:16:13.200Z** | 11:16:13.202Z | **11:16:13.305Z** | +105 ms | **✅ Deletion audit archived asynchronously** |
-| **`slow-notification`** (2000ms simulation) | **11:16:13.511Z** (3.51 ms latency) | 11:16:13.513Z | **11:16:15.521Z** | **+2010 ms** | **✅ API returned in 3.5ms; worker finished ~2s later!** |
-
-> **Key Takeaway**: Even when a heavy background worker takes over 2,000 milliseconds to complete its task, the client experiences zero blocking latency, receiving an instant HTTP 200/201 response.
-
----
-
-## 🔬 Key Questions & Theoretical Analysis (Viva / Lab Evaluation)
-
-### 1. Why does emitting an event not block the API response, even though both run on the same Node.js process?
-* **Asynchronous Scheduling in the Event Loop**: Emitting an event via `EventEmitter` synchronously invokes the listener callbacks registered on that event. However, when the listener delegates its heavy operations to asynchronous APIs (such as `setTimeout`, `setImmediate`, or asynchronous I/O promises), Node.js registers the callback into the event loop's timer or poll phase and immediately returns control.
-* **Separation from Response Pipeline**: Because the response has already been flushed to the network socket (`res.status(201).json(...)`), the HTTP transaction is terminated from the client's perspective while the background task finishes asynchronously in a later event loop tick.
-
-### 2. What would happen to API response time if the notification logic were placed directly inside the POST route instead of in an event handler?
-* **Direct Execution Penalty**: If the notification logic (e.g. sending an email via SMTP or making an external webhook request taking 500–2,000 ms) were placed synchronously inside the `POST /tasks` route before sending the response, the client would be forced to wait for that entire duration.
-* **Degraded Client Experience**: API response latency would skyrocket from **~5 ms to 2,000+ ms**, causing visible UI freezes, increased risk of client gateway timeouts, and poor mobile responsiveness.
-
-### 3. Why is EventEmitter a reasonable choice for this scale of application, but not for a production system handling millions of events per day?
-* **Why EventEmitter is Great Here**:
-  - **Zero Overhead**: Built directly into Node.js core (`require('events')`) with zero external infrastructure, zero network serialization latency, and zero dependency overhead.
-  - **Simplicity**: Extremely straightforward pub/sub pattern for single-process architectures.
-* **Why it Fails at Enterprise Scale (Millions of Events/Day)**:
-  - **In-Memory Volatility**: Events reside purely in process memory. If the Node.js server crashes or restarts, all pending in-memory events are permanently lost with no persistence or replay ability.
-  - **No Distributed Capability**: Works exclusively inside a single OS process. In a distributed multi-pod Kubernetes or microservices cluster, an event emitted on Instance 1 cannot be received by listeners on Instance 2.
-  - **No Backpressure or Rate-Limiting**: High event bursts can exhaust Node.js heap memory, leading to out-of-memory (OOM) crashes.
-  - **Production Alternative**: Production systems use dedicated distributed message brokers (such as **RabbitMQ**, **Apache Kafka**, or **Redis BullMQ**) which provide persistent message queues, horizontal consumer scaling, automatic retries, and dead-letter queues.
+### 2. Automated Integration Test Suite (`server/tests/api.test.js`)
+Built with **Jest** and **Supertest** covering 6 core assertions:
+1. `GET /api/db-status` ➔ Responds with status `200` and database connectivity metadata.
+2. `GET /tasks` without token ➔ Verifies route security by expecting `401 Unauthorized`.
+3. `POST /login` ➔ Authenticates test user and asserts a valid signed JWT token is returned.
+4. `GET /tasks` with Bearer Token ➔ Authorizes with JWT and asserts status `200` returning the task array.
+5. `GET /api/cache-stats` ➔ Validates In-Memory Cache metrics (Practical 9) returning hit/miss counters.
+6. `GET /api/event-logs` ➔ Validates Native EventEmitter audit log (Practical 10) returning background events.
 
 ---
 
-## ⚡ Supplementary Problems Implemented
+## 🧪 Local Test Verification
 
-### 1. `task-deleted` Event & Listener
-* Emitted upon deleting a task via `DELETE /tasks/:id`.
-* Listener logs the deletion timestamp and asynchronously archives an audit entry.
-
-### 2. `task-updated` Event & Listener
-* Emitted upon editing a task via `PUT /tasks/:id`.
-* Listener logs the updated title, completion status, and priority.
-
-### 3. Global Error Event Listener (`'error'`)
-* Registered a dedicated error handler (`taskEvents.on('error', ...)`) to prevent unhandled EventEmitter exceptions from crashing the server process.
-
-### 4. 2000ms Slow Notification Simulation
-* Exposed at `POST /api/test-slow-event`.
-* Demonstrates immediate response (< 5 ms) while the simulated background worker runs a 2-second job.
-
-### 5. Live Background Event Audit Stream
-* Endpoint: `GET /api/event-logs`.
-* Retains the last 60 background event execution records in memory.
-* Integrated into the React frontend at `/performance` with an interactive trigger button and real-time polling stream.
-
----
-
-## 📡 RESTful Endpoints Reference (`http://localhost:5000`)
-
-| Method | Endpoint | Description | Event Emitted |
-| :--- | :--- | :--- | :--- |
-| **POST** | `/tasks` | Create new task in MongoDB | `task-created` |
-| **PUT** | `/tasks/:id` | Update task in MongoDB | `task-updated` |
-| **DELETE**| `/tasks/:id` | Delete task from MongoDB | `task-deleted` |
-| **POST** | `/api/test-slow-event` | Simulate heavy 2000ms background worker | `slow-notification` |
-| **GET** | `/api/event-logs` | Retrieve live background event audit history | None |
-| **GET** | `/api/cache-stats` | Retrieve Practical 9 in-memory cache metrics | None |
-| **POST** | `/api/cache-flush` | Reset in-memory cache for benchmarks | None |
-
----
-
-## 🚀 How to Run and Test Locally
-
-### Step 1: Start Express Backend (Port 5000)
+Run the test suite locally with:
 ```bash
-cd server
-npm install
-node server.js
+npm test
 ```
-> API runs on: **`http://localhost:5000`**  
-> Console will log: `✅ Event listeners registered: [task-created, task-deleted, task-updated, slow-notification, error]`
 
-### Step 2: Start React Client (Port 5173)
-```bash
-npm install
-npm run dev
+### Verified Output:
 ```
-> Client runs on: **`http://localhost:5173`**  
-> Event Stream & Optimization Dashboard: **`http://localhost:5173/performance`**
+> student-portfolio@0.0.0 test
+> npm --prefix server test
 
-### Step 3: Run Automated Test Script
-```bash
-node scratch/test_practical10_events.js
+> task-manager-api@1.0.0 test
+> jest --detectOpenHandles --forceExit --runInBand
+
+PASS server/tests/api.test.js
+  ✓ GET /api/db-status returns 200 with connection state (152 ms)
+  ✓ GET /tasks without token returns 401 Unauthorized (45 ms)
+  ✓ POST /login returns 200 and a signed JWT token (210 ms)
+  ✓ GET /tasks with valid Bearer token returns 200 and task array (78 ms)
+  ✓ GET /api/cache-stats returns 200 with cache hit/miss statistics (32 ms)
+  ✓ GET /api/event-logs returns 200 with background audit trail (35 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        7.362 s
+Ran all test suites.
 ```
-> Validates immediate HTTP response, timestamp ordering, and 2-second background execution.
+
+---
+
+## 🔬 Key Questions & Theoretical Analysis (Viva / Rubric)
+
+### 1. Difference between Continuous Integration (CI) and Continuous Delivery/Deployment (CD)
+* **Continuous Integration (CI)**:
+  - Focuses on developer code changes.
+  - Automatically builds and tests code each time a commit is pushed.
+  - Objective: Detect integration problems, regressions, and syntax bugs immediately.
+* **Continuous Delivery (CD)**:
+  - Takes tested code from CI and automatically packages/stages it in staging or testing environments.
+  - Ensures software is in a deployable state at any given moment, with deployment to production gated by manual approval.
+* **Continuous Deployment (CD)**:
+  - Fully automates the entire progression from commit to live production without any human approval bottleneck, provided all tests in CI pass.
+
+### 2. How Automated Testing on Every Push Catches Bugs Early
+* **Immediate Feedback**: Feedback is given within minutes of pushing code rather than weeks later in QA.
+* **Narrow Blast Radius**: Since tests run on small, incremental commits, finding which commit caused a bug is straightforward.
+* **Regression Protection**: Ensures that new features added to the application do not break existing features (e.g. JWT auth, caching, event logging).
+* **Automated Guardrails**: Teams can configure branch protection rules so GitHub prevents merging pull requests that fail automated tests.
+
+### 3. Why Tests Should Not Check Only Valid (Happy Path) Inputs
+* **Negative & Boundary Testing**: Real-world users and potential attackers send malformed, expired, or malicious inputs.
+* **Security Validation**: Asserting that `GET /tasks` without a Bearer token returns `401 Unauthorized` ensures private user tasks cannot be accessed by unauthenticated callers.
+* **Graceful Degradation**: Testing invalid routes or invalid parameters guarantees the server responds with clear HTTP client error codes (`400`, `401`, `404`) rather than crashing with unhandled exceptions (`500 Internal Server Error`).
 
 ---
 
@@ -142,4 +149,5 @@ node scratch/test_practical10_events.js
 * **Student Name**: Daksh Digashia  
 * **Roll No**: D25CS124  
 * **Course**: Advanced Web Development Frameworks (AWDF)  
+* **Repository**: [https://github.com/Daksh-124/AWDF_partical_12-D25CS124](https://github.com/Daksh-124/AWDF_partical_12-D25CS124)  
 * **Academic Year**: 2026
